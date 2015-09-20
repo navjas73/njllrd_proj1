@@ -10,36 +10,41 @@ msg = state()
 def handle_move_robot(req):
     action = req.action
     target = req.target
+    print "gripper: %s, stack: %s" %(msg.gripper_state, msg.stack)
     # Returns true if action is valid and action is completed
     # Possible actions: open_gripper, close_gripper, move_to_block, move_over_block
     print "entered move_robot_callback"
     if action == 'open_gripper':
-        if msg.gripper_state == 0 or msg.to_block == 1: 
+        if msg.stack == 0 or msg.gripper_state == 0: 
             return False
         else:
-            msg.gripper_state == 0
-                # do something
+            msg.gripper_state = 0
+                # open gripper
             print "opened gripper!"
             return True
     elif action == 'close_gripper':
-        if msg.gripper_state == 1 or msg.over_block == 1:
+        if msg.gripper_state == 1 or msg.stack == 1:
             return False
         else:
-            msg.gripper_state == 1
-            
+            msg.gripper_state = 1
+            # close gripper
             print "CLOSEd gripper!"
             return True
     elif action == 'move_to_block':
-        if msg.gripper_state == 1 or msg.to_block == 1 or msg.over_block == 1:
+        if msg.gripper_state == 1 or msg.stack == 0:
             return False
         else:
-            msg.to_block = 1
+            msg.stack = 0
                 # do something
             return True
     elif action == 'move_over_block':
-        msg.over_block == 1
-        print "moved over block %s" %(target)
-        return True
+        if msg.gripper_state == 0 or msg.stack == 1:
+            return False
+        else:
+            msg.stack = 1
+                #do something
+            print "moved over block %s" %(req.target)
+            return True
     else:
         return False
 
@@ -55,8 +60,7 @@ def robot_interface():
     rospy.init_node('robot_interface')
     rate = rospy.Rate(1)
     msg.gripper_state = 0 
-    msg.to_block = 1
-    msg.over_block = 0
+    msg.stack = 0
     s = rospy.Service('move_robot', move_robot, handle_move_robot)
     while not rospy.is_shutdown():
         pub.publish(msg)
