@@ -3,13 +3,16 @@ import rospy
 from njllrd_proj1.srv import *
 from njllrd_proj1.msg import * 
 import baxter_interface
+from std_msgs.msg import String
 
 msg = state()
 
-def handle_move_robot(action, target):
-    
+def handle_move_robot(req):
+    action = req.action
+    target = req.target
     # Returns true if action is valid and action is completed
     # Possible actions: open_gripper, close_gripper, move_to_block, move_over_block
+    print "entered move_robot_callback"
     if action == 'open_gripper':
         if msg.gripper_state == 0 or msg.to_block == 1: 
             return False
@@ -33,7 +36,6 @@ def handle_move_robot(action, target):
             msg.to_block = 1
                 # do something
             return True
-
     elif action == 'move_over_block':
         msg.over_block == 1
         print "moved over block %s" %(target)
@@ -55,11 +57,12 @@ def robot_interface():
     msg.gripper_state = 0 
     msg.to_block = 1
     msg.over_block = 0
+    s = rospy.Service('move_robot', move_robot, handle_move_robot)
     while not rospy.is_shutdown():
         pub.publish(msg)
         rate.sleep()
-    s = rospy.Service('move_robot', move_robot, handle_move_robot)
-    print "Ready to accept requests"
+
+    
     rospy.spin()
 
 if __name__ == "__main__":
