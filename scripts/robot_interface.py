@@ -15,21 +15,28 @@ def handle_move_robot(action, target):
             return False
         else:
             msg.gripper_state == 0
+                # do something
+            print "opened gripper!"
             return True
     elif action == 'close_gripper':
         if msg.gripper_state == 1 or msg.over_block == 1:
             return False
         else:
             msg.gripper_state == 1
+            
+            print "CLOSEd gripper!"
             return True
     elif action == 'move_to_block':
         if msg.gripper_state == 1 or msg.to_block == 1 or msg.over_block == 1:
             return False
         else:
             msg.to_block = 1
+                # do something
             return True
+
     elif action == 'move_over_block':
         msg.over_block == 1
+        print "moved over block %s" %(target)
         return True
     else:
         return False
