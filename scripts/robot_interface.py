@@ -2,6 +2,7 @@
 import rospy
 from njllrd_proj1.srv import *
 from njllrd_proj1.msg import * 
+import baxter_interface
 
 msg = state()
 
@@ -11,25 +12,25 @@ def handle_move_robot(action, target):
     # Possible actions: open_gripper, close_gripper, move_to_block, move_over_block
     if action == 'open_gripper':
         if msg.gripper_state == 0 or msg.to_block == 1: 
-            return false
+            return False
         else:
             msg.gripper_state == 0
-            return true
+            return True
     elif action == 'close_gripper':
         if msg.gripper_state == 1 or msg.over_block == 1:
-            return false
+            return False
         else:
             msg.gripper_state == 1
-            return true
+            return True
     elif action == 'move_to_block':
         if msg.gripper_state == 1 or msg.to_block == 1 or msg.over_block == 1:
-            return false
+            return False
         else:
             msg.to_block = 1
-            return true
+            return True
     elif action == 'move_over_block':
         msg.over_block == 1
-        return true
+        return True
     else:
         return False
 
