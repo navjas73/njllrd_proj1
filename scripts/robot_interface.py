@@ -6,6 +6,8 @@ import baxter_interface
 from std_msgs.msg import String
 
 msg = state()
+limb = baxter_interface.Limb('right')
+gripper = baxter_interface.Gripper('right')
 
 def handle_move_robot(req):
     action = req.action
@@ -27,6 +29,9 @@ def handle_move_robot(req):
             return False
         else:
             msg.gripper_state = 1
+            gripper.set_moving_force(30)
+            gripper.set_holding_force(30)
+            gripper.command_position(0)
             # close gripper
             print "CLOSEd gripper!"
             return True
