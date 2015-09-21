@@ -5,13 +5,21 @@ from njllrd_proj1.msg import *
 import baxter_interface
 from std_msgs.msg import String
 
-msg = state()
-limb = baxter_interface.Limb('right')
-gripper = baxter_interface.Gripper('right')
+
+
+
 
 def handle_move_robot(req):
+    if init == 0:
+        initial_pose = limb.endpoint_pose()
+        print(initial_pose)
+        #set state of blocks
+        #set state of block 0 # table underneath final stack
+        initialization = 1
+        
     action = req.action
     target = req.target
+    
     print "gripper: %s, stack: %s" %(msg.gripper_state, msg.stack)
     # Returns true if action is valid and action is completed
     # Possible actions: open_gripper, close_gripper, move_to_block, move_over_block
@@ -21,7 +29,7 @@ def handle_move_robot(req):
             return False
         else:
             msg.gripper_state = 0
-                # open gripper
+            gripper.open()
             print "opened gripper!"
             return True
     elif action == 'close_gripper':
@@ -32,7 +40,6 @@ def handle_move_robot(req):
             gripper.set_moving_force(30)
             gripper.set_holding_force(30)
             gripper.command_position(0)
-            # close gripper
             print "CLOSEd gripper!"
             return True
     elif action == 'move_to_block':
@@ -47,7 +54,14 @@ def handle_move_robot(req):
             return False
         else:
             msg.stack = 1
-                #do something
+            new_pose = pose
+            for key in new_pose:
+                if key == "position":
+                    value = new_pose.get(key)   
+                    value['z'] = value['z'] + finger_length
+                    new_pose[key] = value
+            
+            # move up finger height
             print "moved over block %s" %(req.target)
             return True
     else:
@@ -64,9 +78,22 @@ def robot_interface():
     pub = rospy.Publisher("state",state,queue_size=10)
     rospy.init_node('robot_interface')
     rate = rospy.Rate(1)
+    global msg
+    msg = state()
     msg.gripper_state = 0 
     msg.stack = 0
     s = rospy.Service('move_robot', move_robot, handle_move_robot)
+    global gripper # declare global gripper
+    gripper = baxter_interface.Gripper('right') #instantiate gripper
+    global limb # declare global limb
+    limb = baxter_interface.Limb('right') #instantiate limb
+    global initial_pose
+    global init
+    init = 0
+    print init
+    global finger_length
+    finger_length = .10
+    gripper.calibrate() # calibrate gripper upon starting node
     while not rospy.is_shutdown():
         pub.publish(msg)
         rate.sleep()
