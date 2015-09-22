@@ -4,7 +4,17 @@ from njllrd_proj1.srv import *
 from njllrd_proj1.msg import * 
 import baxter_interface
 from std_msgs.msg import String
-
+from std_msgs.msg import Header
+from baxter_core_msgs.srv import (
+    SolvePositionIK,
+    SolvePositionIKRequest,
+)
+from geometry_msgs.msg import (
+    PoseStamped,
+    Pose,
+    Point,
+    Quaternion,
+)
 
 
 
@@ -12,6 +22,7 @@ from std_msgs.msg import String
 def handle_move_robot(req):
     if init == 0:
         initial_pose = limb.endpoint_pose()
+        pose = initial_pose
         print(initial_pose)
         #set state of blocks
         #set state of block 0 # table underneath final stack
@@ -24,6 +35,7 @@ def handle_move_robot(req):
     # Returns true if action is valid and action is completed
     # Possible actions: open_gripper, close_gripper, move_to_block, move_over_block
     print "entered move_robot_callback"
+
     if action == 'open_gripper':
         if msg.stack == 0 or msg.gripper_state == 0: 
             return False
@@ -32,6 +44,7 @@ def handle_move_robot(req):
             gripper.open()
             print "opened gripper!"
             return True
+
     elif action == 'close_gripper':
         if msg.gripper_state == 1 or msg.stack == 1:
             return False
@@ -42,6 +55,7 @@ def handle_move_robot(req):
             gripper.command_position(0)
             print "CLOSEd gripper!"
             return True
+
     elif action == 'move_to_block':
         if msg.gripper_state == 1 or msg.stack == 0:
             return False
@@ -49,25 +63,81 @@ def handle_move_robot(req):
             msg.stack = 0
                 # do something
             return True
+
     elif action == 'move_over_block':
         if msg.gripper_state == 0 or msg.stack == 1:
             return False
         else:
             msg.stack = 1
-            new_pose = pose
-            for key in new_pose:
-                if key == "position":
-                    value = new_pose.get(key)   
-                    value['z'] = value['z'] + finger_length
-                    new_pose[key] = value
+            value = pose['position']
+            new_pose = limb.Point(value[0],value[1], value[2]+finger_length)
+            joints = request_kinematics(new_pose, initial_pose['orientation'])
+            limb.move_to_joint_positions(joints)
+            print "moved up"   
+         
+            #for key in new_pose:
+            #    if key == "position":
+            #        value = new_pose.get(key)   
+            #        value['z'] = value['z'] + finger_length
+            #        new_pose[key] = value
+            
             # move up finger height
+		
+	        # move over "y"
+            pose = limb.endpoint_pose()
+            value = pose['position']
+            new_pose = limb.Point(value[0],value[1] + .2, value[2])
+            joints = request_kinematics(new_pose, initial_pose['orientation'])
+            limb.move_to_joint_positions(joints)
+
+            # lower block
+            num_blocks = rospy.get_param("/num_blocks")
+            num_blocks_moved = rospy.get_param("/num_blocks_moved")
+            value = pose['position']
+            new_pose = limb.Point(value[0],value[1], value[2]-(num_blocks-num_blocks_moved)*.04445)
+            joints = request_kinematics(new_pose, initial_pose['orientation'])
+            limb.move_to_joint_positions(joints)
+
             print "moved over block %s" %(req.target)
             return True
     else:
         return False
 
+
     # Returns false if action is invalid or action fails
     # else return False
+
+def request_kinematics(position, quaternion):
+    # rospy.init_node("rsdk_ik_service_client")
+    ns = "ExternalTools/" + "right" + "/PositionKinematicsNode/IKService"
+    iksvc = rospy.ServiceProxy(ns, SolvePositionIK) 
+    ikreq = SolvePositionIKRequest()
+    hdr = Header(stamp=rospy.Time.now(), frame_id='base') 
+    poses = {
+        'right': PoseStamped(
+            header = hdr,
+            pose = Pose(position,quaternion)
+        )
+    }
+    ikreq.pose_stamp.append(poses['right'])
+    print ikreq
+    try:
+        rospy.wait_for_service(ns, 5.0)
+        resp = iksvc(ikreq)
+    except (rospy.ServiceException, rospy.ROSException), e:
+        rospy.logerr("Service call failed: %s" % (e,))
+        return 1
+
+    if (resp.isValid[0]):
+        print("SUCCESS - Valid Joint Solution Found:")
+        # Format solution into Limb API-compatible dictionary
+        limb_joints = dict(zip(resp.joints[0].name, resp.joints[0].position))
+        return limb_joints
+    else:
+        print("INVALID POSE - No Valid Joint Solution Found.")
+ 
+    return 0  
+
 
 # Declares state of world at 1Hz using topic "state"
 def broadcast_state():
@@ -91,12 +161,12 @@ def robot_interface():
     init = 0
     print init
     global finger_length
-    finger_length = .10
-    gripper.calibrate() # calibrate gripper upon starting node
+    finger_length = 0.05
+    # gripper.calibrate() # calibrate gripper upon starting node
     while not rospy.is_shutdown():
         pub.publish(msg)
         rate.sleep()
-
+    
     
     rospy.spin()
 

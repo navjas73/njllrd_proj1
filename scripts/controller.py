@@ -39,7 +39,7 @@ def scatter():
 def stack_ascending():
     # Code for moving blocks with stacked ascending orientation
     request_movement("close_gripper", 1)
-    # request_movement("move_over_block", 0) # virtual block (table)
+    request_movement("move_over_block", 0) # virtual block (table)
     # request_movement("open_gripper", 1)
 
 def stack_descending():

@@ -35,6 +35,7 @@ def handle_move_robot(req):
     # Returns true if action is valid and action is completed
     # Possible actions: open_gripper, close_gripper, move_to_block, move_over_block
     print "entered move_robot_callback"
+
     if action == 'open_gripper':
         if msg.stack == 0 or msg.gripper_state == 0: 
             return False
@@ -43,6 +44,7 @@ def handle_move_robot(req):
             gripper.open()
             print "opened gripper!"
             return True
+
     elif action == 'close_gripper':
         if msg.gripper_state == 1 or msg.stack == 1:
             return False
@@ -53,6 +55,7 @@ def handle_move_robot(req):
             gripper.command_position(0)
             print "CLOSEd gripper!"
             return True
+
     elif action == 'move_to_block':
         if msg.gripper_state == 1 or msg.stack == 0:
             return False
@@ -60,16 +63,18 @@ def handle_move_robot(req):
             msg.stack = 0
                 # do something
             return True
+
     elif action == 'move_over_block':
         if msg.gripper_state == 0 or msg.stack == 1:
             return False
         else:
             msg.stack = 1
-            new_pose = pose
-            value = new_pose['position']
+            value = pose['position']
             new_pose = limb.Point(value[0],value[1], value[2]+finger_length)
             joints = request_kinematics(new_pose, initial_pose['orientation'])
-            limb.move_to_joint_positions(joints)            
+            limb.move_to_joint_positions(joints)
+            print "moved up"   
+         
             #for key in new_pose:
             #    if key == "position":
             #        value = new_pose.get(key)   
@@ -77,10 +82,28 @@ def handle_move_robot(req):
             #        new_pose[key] = value
             
             # move up finger height
+		
+	        # move over "y"
+            pose = limb.endpoint_pose()
+            value = pose['position']
+            new_pose = limb.Point(value[0],value[1] + .2, value[2])
+            joints = request_kinematics(new_pose, initial_pose['orientation'])
+            limb.move_to_joint_positions(joints)
+
+            # lower block
+            num_blocks = rospy.get_param("/num_blocks")
+            num_blocks_moved = rospy.get_param("/num_blocks_moved")
+            pose = limb.endpoint_pose()
+            value = pose['position']
+            new_pose = limb.Point(value[0],value[1], value[2]-(num_blocks-num_blocks_moved)*.04445)
+            joints = request_kinematics(new_pose, initial_pose['orientation'])
+            limb.move_to_joint_positions(joints)
+
             print "moved over block %s" %(req.target)
             return True
     else:
         return False
+
 
     # Returns false if action is invalid or action fails
     # else return False
