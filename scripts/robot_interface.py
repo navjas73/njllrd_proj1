@@ -139,8 +139,8 @@ def robot_interface():
     init = 0
     print init
     global finger_length
-    finger_length = .1
-    gripper.calibrate() # calibrate gripper upon starting node
+    finger_length = 0.05
+    # gripper.calibrate() # calibrate gripper upon starting node
     while not rospy.is_shutdown():
         pub.publish(msg)
         rate.sleep()
