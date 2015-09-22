@@ -25,7 +25,7 @@ def handle_move_robot(req):
         pose = initial_pose
         print(initial_pose)
         #set state of blocks
-        #set state of block 0 # table underneath final stack
+        #set state of block 0 -- table underneath final stack
         initialization = 1
         
     action = req.action
@@ -69,21 +69,14 @@ def handle_move_robot(req):
             return False
         else:
             msg.stack = 1
-            value = pose['position']
+            # move up finger height
+            value = initial_pose['position']
             new_pose = limb.Point(value[0],value[1], value[2]+finger_length)
             joints = request_kinematics(new_pose, initial_pose['orientation'])
             limb.move_to_joint_positions(joints)
             print "moved up"   
          
-            #for key in new_pose:
-            #    if key == "position":
-            #        value = new_pose.get(key)   
-            #        value['z'] = value['z'] + finger_length
-            #        new_pose[key] = value
-            
-            # move up finger height
-		
-	        # move over "y"
+	        # move over in "y"
             pose = limb.endpoint_pose()
             value = pose['position']
             new_pose = limb.Point(value[0],value[1] + .2, value[2])
@@ -95,7 +88,7 @@ def handle_move_robot(req):
             num_blocks_moved = rospy.get_param("/num_blocks_moved")
             pose = limb.endpoint_pose()
             value = pose['position']
-            new_pose = limb.Point(value[0],value[1], value[2]-(num_blocks-num_blocks_moved)*.04445)
+            new_pose = limb.Point(value[0],value[1], value[2]-.04445*(num_blocks-num_blocks_moved)-finger_length)
             joints = request_kinematics(new_pose, initial_pose['orientation'])
             limb.move_to_joint_positions(joints)
 
