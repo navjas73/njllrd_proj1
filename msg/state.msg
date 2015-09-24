@@ -13,3 +13,4 @@ int64 stack
 # Gripper over a block (1) or not (0)
 # int64 over_block
 
+blockposition[] block_positions

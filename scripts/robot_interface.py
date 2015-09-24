@@ -16,17 +16,37 @@ from geometry_msgs.msg import (
     Quaternion,
 )
 
-
+gripper = None
+first_run = None
+initial_pose = None
+pub = None
+limb = None
+finger_length = None
+block_height = None
+msg = None
 
 
 def handle_move_robot(req):
-    if init == 0:
+    global first_run
+    global initial_pose
+    if first_run == 1:
         initial_pose = limb.endpoint_pose()
         pose = initial_pose
-        print(initial_pose)
+        #print(initial_pose)
+        for i in range(0,rospy.get_param("/num_blocks")):
+            print(i)
+            block = blockposition()
+            block.x = pose['position'][0]
+            block.y = pose['position'][1]
+            block.z = pose['position'][2]
+            msg.block_positions.append(block)
+            value = pose['position']
+            new_position = limb.Point(value[0], value[1], value[2]-block_height)
+            pose['position'] = new_position
+            print(pose)
         #set state of blocks
         #set state of block 0 -- table underneath final stack
-        initialization = 1
+        first_run = 0
         
     action = req.action
     target = req.target
@@ -50,9 +70,7 @@ def handle_move_robot(req):
             return False
         else:
             msg.gripper_state = 1
-            gripper.set_moving_force(30)
-            gripper.set_holding_force(30)
-            gripper.command_position(0)
+            gripper.close()
             print "CLOSEd gripper!"
             return True
 
@@ -61,7 +79,8 @@ def handle_move_robot(req):
             return False
         else:
             msg.stack = 0
-                # do something
+            # move up to finger height + num_blocks*block_height
+            
             return True
 
     elif action == 'move_over_block':
@@ -79,7 +98,7 @@ def handle_move_robot(req):
 	        # move over in "y"
             pose = limb.endpoint_pose()
             value = pose['position']
-            new_pose = limb.Point(value[0],value[1] + .2, value[2])
+            new_pose = limb.Point(value[0],value[1] + .25, value[2])
             joints = request_kinematics(new_pose, initial_pose['orientation'])
             limb.move_to_joint_positions(joints)
 
@@ -88,10 +107,11 @@ def handle_move_robot(req):
             num_blocks_moved = rospy.get_param("/num_blocks_moved")
             pose = limb.endpoint_pose()
             value = pose['position']
-            new_pose = limb.Point(value[0],value[1], value[2]-.04445*(num_blocks-num_blocks_moved)-finger_length)
+            new_pose = limb.Point(value[0],value[1], value[2]-block_height*(num_blocks-num_blocks_moved)-finger_length)
             joints = request_kinematics(new_pose, initial_pose['orientation'])
             limb.move_to_joint_positions(joints)
 
+           
             print "moved over block %s" %(req.target)
             return True
     else:
@@ -135,30 +155,37 @@ def request_kinematics(position, quaternion):
 
 # Declares state of world at 1Hz using topic "state"
 def broadcast_state():
+    pub.publish(msg)
     return True
-
-def robot_interface():
-    pub = rospy.Publisher("state",state,queue_size=10)
-    rospy.init_node('robot_interface')
-    rate = rospy.Rate(1)
-    global msg
-    msg = state()
-    msg.gripper_state = 0 
-    msg.stack = 0
-    s = rospy.Service('move_robot', move_robot, handle_move_robot)
+    
+def setup_variables():
     global gripper # declare global gripper
     gripper = baxter_interface.Gripper('right') #instantiate gripper
     global limb # declare global limb
     limb = baxter_interface.Limb('right') #instantiate limb
     global initial_pose
-    global init
-    init = 0
-    print init
+    global first_run
+    first_run = 1
     global finger_length
     finger_length = 0.05
+    global block_height
+    block_height = .0445
+    global msg
+    msg = state()
+    msg.gripper_state = 0 
+    msg.stack = 0
+
+def robot_interface():
+    global pub
+    pub = rospy.Publisher("state",state,queue_size=10)
+    rospy.init_node('robot_interface')
+    setup_variables()
+    rate = rospy.Rate(1)
+    s = rospy.Service('move_robot', move_robot, handle_move_robot)
+    
     # gripper.calibrate() # calibrate gripper upon starting node
     while not rospy.is_shutdown():
-        pub.publish(msg)
+        broadcast_state()
         rate.sleep()
     
     

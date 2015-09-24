@@ -38,9 +38,12 @@ def scatter():
 
 def stack_ascending():
     # Code for moving blocks with stacked ascending orientation
-    request_movement("close_gripper", 1)
-    request_movement("move_over_block", 0) # virtual block (table)
-    # request_movement("open_gripper", 1)
+    for i in range(0,rospy.get_param("/num_blocks")):
+        request_movement("close_gripper", 1)
+        request_movement("move_over_block", 0) # virtual block (table)
+        request_movement("open_gripper", 1)
+        request_movement("move_to_block",0)
+        
 
 def stack_descending():
     # Code for moving blocks with stacked descending orientation
@@ -54,9 +57,10 @@ def read_state():
 
 def controller():
     rospy.init_node('controller')
+    rospy.wait_for_service('move_robot')
     rospy.Subscriber('command', String, mode_selection)
     # rospy.Subscriber('state', state, read_state)
-    rospy.wait_for_service('move_robot')
+    
     # time.sleep(10)
     rospy.spin()
 

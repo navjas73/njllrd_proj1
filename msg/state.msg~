@@ -1,11 +1,16 @@
 # Number of blocks on table
-int64 number_blocks
+# int64 number_blocks
 
 # Gripper open (0) or closed (1)
 int64 gripper_state 
 
-# Block in hand (1) or not in hand (0)
-int64 has_block
+# Initial stack (0) or final stack (1)
+int64 stack
 
+# Fingers around block (1) or not (0)
+# int64 to_block
 
+# Gripper over a block (1) or not (0)
+# int64 over_block
 
+blockposition[] block_positions
