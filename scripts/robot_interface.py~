@@ -29,39 +29,51 @@ msg = None
 def handle_move_robot(req):
     global first_run
     global initial_pose
+    print initial_pose
     if first_run == 1:
         initial_pose = limb.endpoint_pose()
-        pose = initial_pose
-        #print(initial_pose)
-        for i in range(0,rospy.get_param("/num_blocks")):
+        fpose = initial_pose
+        
+        #set state of block 0 -- table underneath final stack
+        block = blockposition()
+        block.x = fpose['position'][0]
+        # moved over .25m
+        block.y = fpose['position'][1]+.25 
+        # moved down num_blocks*block_height
+        block.z = fpose['position'][2]-rospy.get_param("/num_blocks")*block_height
+        msg.block_positions.append(block)
+        #set state of other blocks (THIS PART IS MESSING UP INITIAL_POSE SOMEHOW)
+        """for i in range(0,rospy.get_param("/num_blocks")):
             print(i)
             block = blockposition()
-            block.x = pose['position'][0]
-            block.y = pose['position'][1]
-            block.z = pose['position'][2]
+            block.x = fpose['position'][0]
+            block.y = fpose['position'][1]
+            block.z = fpose['position'][2]
             msg.block_positions.append(block)
-            value = pose['position']
-            new_position = limb.Point(value[0], value[1], value[2]-block_height)
-            pose['position'] = new_position
-            print(pose)
-        #set state of blocks
-        #set state of block 0 -- table underneath final stack
+            value = fpose['position']
+            fnew_position = limb.Point(value[0], value[1], value[2]-block_height)
+            fpose['position'] = fnew_position
+            print(fpose)
+        """
+        
         first_run = 0
+    
         
     action = req.action
     target = req.target
-    
+    print initial_pose
     print "gripper: %s, stack: %s" %(msg.gripper_state, msg.stack)
     # Returns true if action is valid and action is completed
     # Possible actions: open_gripper, close_gripper, move_to_block, move_over_block
-    print "entered move_robot_callback"
-
+   
     if action == 'open_gripper':
         if msg.stack == 0 or msg.gripper_state == 0: 
             return False
         else:
             msg.gripper_state = 0
             gripper.open()
+            rate = rospy.Rate(.5)
+            rate.sleep()
             print "opened gripper!"
             return True
 
@@ -71,6 +83,8 @@ def handle_move_robot(req):
         else:
             msg.gripper_state = 1
             gripper.close()
+            rate = rospy.Rate(.5)
+            rate.sleep()
             print "CLOSEd gripper!"
             return True
 
@@ -79,7 +93,23 @@ def handle_move_robot(req):
             return False
         else:
             msg.stack = 0
-            # move up to finger height + num_blocks*block_height
+            # move up to "over end stack"
+            value = initial_pose['position']
+            new_pose = limb.Point(value[0],value[1]+.25, value[2]+finger_length)
+            joints = request_kinematics(new_pose, initial_pose['orientation'])
+            limb.move_to_joint_positions(joints)
+            
+            # move up to "over initial stack"
+            value = initial_pose['position']
+            new_pose = limb.Point(value[0],value[1], value[2]+finger_length)
+            joints = request_kinematics(new_pose, initial_pose['orientation'])
+            limb.move_to_joint_positions(joints)
+            
+            # move down to next block
+            value = initial_pose['position']
+            new_pose = limb.Point(value[0],value[1], value[2]-rospy.get_param("/num_blocks_moved")*block_height)
+            joints = request_kinematics(new_pose, initial_pose['orientation'])
+            limb.move_to_joint_positions(joints)
             
             return True
 
@@ -88,29 +118,30 @@ def handle_move_robot(req):
             return False
         else:
             msg.stack = 1
-            # move up finger height
+            print initial_pose
+            # move up to "over initial stack"
             value = initial_pose['position']
             new_pose = limb.Point(value[0],value[1], value[2]+finger_length)
             joints = request_kinematics(new_pose, initial_pose['orientation'])
             limb.move_to_joint_positions(joints)
-            print "moved up"   
-         
-	        # move over in "y"
+            print initial_pose
+            
+	        # move over to "over end stack"
             pose = limb.endpoint_pose()
             value = pose['position']
             new_pose = limb.Point(value[0],value[1] + .25, value[2])
             joints = request_kinematics(new_pose, initial_pose['orientation'])
             limb.move_to_joint_positions(joints)
 
-            # lower block
+            # lower block to be over "target" block
             num_blocks = rospy.get_param("/num_blocks")
             num_blocks_moved = rospy.get_param("/num_blocks_moved")
             pose = limb.endpoint_pose()
             value = pose['position']
-            new_pose = limb.Point(value[0],value[1], value[2]-block_height*(num_blocks-num_blocks_moved)-finger_length)
+            new_pose = limb.Point(value[0],value[1], value[2]-block_height*(num_blocks-num_blocks_moved-1)-finger_length)
             joints = request_kinematics(new_pose, initial_pose['orientation'])
             limb.move_to_joint_positions(joints)
-
+            rospy.set_param("/num_blocks_moved",rospy.get_param("/num_blocks_moved")+1)
            
             print "moved over block %s" %(req.target)
             return True
@@ -134,7 +165,7 @@ def request_kinematics(position, quaternion):
         )
     }
     ikreq.pose_stamp.append(poses['right'])
-    print ikreq
+    #print ikreq
     try:
         rospy.wait_for_service(ns, 5.0)
         resp = iksvc(ikreq)
@@ -143,7 +174,7 @@ def request_kinematics(position, quaternion):
         return 1
 
     if (resp.isValid[0]):
-        print("SUCCESS - Valid Joint Solution Found:")
+        #print("SUCCESS - Valid Joint Solution Found:")
         # Format solution into Limb API-compatible dictionary
         limb_joints = dict(zip(resp.joints[0].name, resp.joints[0].position))
         return limb_joints

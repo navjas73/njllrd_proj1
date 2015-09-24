@@ -38,11 +38,18 @@ def scatter():
 
 def stack_ascending():
     # Code for moving blocks with stacked ascending orientation
-    for i in range(0,rospy.get_param("/num_blocks")):
+    num_blocks = rospy.get_param("/num_blocks")
+    rate = rospy.Rate(.2)
+    for i in range(0,num_blocks):
         request_movement("close_gripper", 1)
-        request_movement("move_over_block", 0) # virtual block (table)
+        rate.sleep()
+        request_movement("move_over_block", 0+i) # virtual block (table)
+        rate.sleep()
         request_movement("open_gripper", 1)
-        request_movement("move_to_block",0)
+        rate.sleep()
+        if i != (num_blocks-1):
+            request_movement("move_to_block",num_blocks-i-1)
+            rate.sleep()
         
 
 def stack_descending():
