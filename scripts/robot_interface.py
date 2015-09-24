@@ -29,7 +29,7 @@ msg = None
 def handle_move_robot(req):
     global first_run
     global initial_pose
-    print initial_pose
+    #print initial_pose
     if first_run == 1:
         initial_pose = limb.endpoint_pose()
         fpose = initial_pose
@@ -61,7 +61,7 @@ def handle_move_robot(req):
         
     action = req.action
     target = req.target
-    print initial_pose
+    #print initial_pose
     print "gripper: %s, stack: %s" %(msg.gripper_state, msg.stack)
     # Returns true if action is valid and action is completed
     # Possible actions: open_gripper, close_gripper, move_to_block, move_over_block
@@ -118,13 +118,13 @@ def handle_move_robot(req):
             return False
         else:
             msg.stack = 1
-            print initial_pose
+            #print initial_pose
             # move up to "over initial stack"
             value = initial_pose['position']
             new_pose = limb.Point(value[0],value[1], value[2]+finger_length)
             joints = request_kinematics(new_pose, initial_pose['orientation'])
             limb.move_to_joint_positions(joints)
-            print initial_pose
+            #print initial_pose
             
 	        # move over to "over end stack"
             pose = limb.endpoint_pose()

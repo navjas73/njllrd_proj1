@@ -43,12 +43,14 @@ def stack_ascending():
     for i in range(0,num_blocks):
         request_movement("close_gripper", 1)
         rate.sleep()
-        request_movement("move_over_block", 0+i) # virtual block (table)
+        print("move over block" + str(i))
+        request_movement("move_over_block", i) # virtual block (table)
         rate.sleep()
         request_movement("open_gripper", 1)
         rate.sleep()
         if i != (num_blocks-1):
-            request_movement("move_to_block",num_blocks-i-1)
+            print("move to block" + str(i+2))
+            request_movement("move_to_block",i+2)
             rate.sleep()
         
 
