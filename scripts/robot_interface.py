@@ -222,7 +222,7 @@ def setup_variables():
     global finger_length
     finger_length = 0.05
     global block_height
-    block_height = .0445
+    block_height = .048
     global msg
     msg = state()
     msg.gripper_state = 0 
