@@ -8,17 +8,30 @@ from std_msgs.msg import String
 # When topic "command" is published to, reads block orientation mode and
 #   starts relevant process
 def mode_selection(data):
-    if data.data == "scatter":
-        scatter()
-    elif data.data == "stack_ascending":
-        stack_ascending()
-    elif data.data == "stack_descending":
-        stack_descending()
-    elif data.data == "odd_even":
-        odd_even()
-    else: 
-        print("Invalid mode")
-
+    dual_arm = rospy.get_param("/dual_arm_mode")
+    if dual_arm == False:
+        if data.data == "scatter":
+            scatter()
+        elif data.data == "stack_ascending":
+            stack_ascending()
+        elif data.data == "stack_descending":
+            stack_descending()
+        elif data.data == "odd_even":
+            odd_even()
+        else: 
+            print("Invalid mode")
+    else:
+        if data.data == "scatter":
+            dual_scatter()
+        elif data.data == "stack_ascending":
+            dual_stack_ascending()
+        elif data.data == "stack_descending":
+            dual_stack_descending()
+        elif data.data == "odd_even":
+            dual_odd_even()
+        else: 
+            print("Invalid mode")
+    
 
 # Initiates request to move_robot service (handled by robot interface server)
 def request_movement(action, target):
@@ -37,7 +50,7 @@ def scatter():
     return
 
 def stack_ascending():
-    # Code for moving blocks with stacked ascending orientation
+    # Code for stack_ascending with stacked descending orientation
     num_blocks = rospy.get_param("/num_blocks")
     rate = rospy.Rate(.5)
     for i in range(0,num_blocks):
@@ -52,13 +65,54 @@ def stack_ascending():
             print("move to block" + str(i+2))
             request_movement("move_to_block",i+2)
             rate.sleep()
+    # Code for stack_ascending with stacked ascending orientation
         
 
 def stack_descending():
-    # Code for moving blocks with stacked descending orientation
+    # Code for stack_descending blocks with stacked ascending orientation
+
+
+
+
+    # Code for stack_descending blocks with stacked descending orientation
     return
 
 def odd_even():
+    return
+
+def dual_scatter():
+    # Code for moving blocks with scattered orientation
+    return
+
+def dual_stack_ascending():
+    # Code for stack_ascending with stacked descending orientation
+    num_blocks = rospy.get_param("/num_blocks")
+    rate = rospy.Rate(.5)
+    for i in range(0,num_blocks):
+        request_movement("close_gripper", 1)
+        rate.sleep()
+        print("move over block" + str(i))
+        request_movement("move_over_block", i) # virtual block (table)
+        rate.sleep()
+        request_movement("open_gripper", 1)
+        rate.sleep()
+        if i != (num_blocks-1):
+            print("move to block" + str(i+2))
+            request_movement("move_to_block",i+2)
+            rate.sleep()
+    # Code for stack_ascending with stacked ascending orientation
+        
+
+def dual_stack_descending():
+    # Code for stack_descending blocks with stacked ascending orientation
+
+
+
+
+    # Code for stack_descending blocks with stacked descending orientation
+    return
+
+def dual_odd_even():
     return
 
 def read_state():

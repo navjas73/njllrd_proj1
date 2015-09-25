@@ -26,11 +26,18 @@ block_height = None
 msg = None
 
 
+
+# Handler needs to be changed for two arm version
+# I think we should have the same handler with a directional component based on the arm that's supposed to be moved
+
 def handle_move_robot(req):
     global first_run
     global initial_pose
-    #print initial_pose
+
+    # Initialization of block positions, if this is the first request we're receiving
     if first_run == 1:
+        
+        # gets initial pose of arm
         initial_pose = limb.endpoint_pose()
         fpose = initial_pose
         
@@ -42,47 +49,47 @@ def handle_move_robot(req):
         # moved down num_blocks*block_height
         block.z = fpose['position'][2]-rospy.get_param("/num_blocks")*block_height
         msg.block_positions.append(block)
-        #set state of other blocks (THIS PART IS MESSING UP INITIAL_POSE SOMEHOW)
-        """for i in range(0,rospy.get_param("/num_blocks")):
+
+        #set state of other blocks 
+        for i in range(0,rospy.get_param("/num_blocks")):
             print(i)
-            block = blockposition()
-            block.x = fpose['position'][0]
-            block.y = fpose['position'][1]
-            block.z = fpose['position'][2]
-            msg.block_positions.append(block)
-            value = fpose['position']
-            fnew_position = limb.Point(value[0], value[1], value[2]-block_height)
-            fpose['position'] = fnew_position
-            print(fpose)
-        """
+            block = blockposition() # makes new instance of blockposition msg
+            block.x = fpose['position'][0]  # sets x of block to fpose
+            block.y = fpose['position'][1]  # sets y of block to fpose
+            block.z = fpose['position'][2]-block_height*i  # sets z of block to fpose (varies with current block)
+            msg.block_positions.append(block)   # adds block to block_positions array (in state msg)      
         
-        first_run = 0
+        first_run = 0 # makes sure we don't go into initialization step again
     
         
     action = req.action
     target = req.target
-    #print initial_pose
+   
     print "gripper: %s, stack: %s" %(msg.gripper_state, msg.stack)
     # Returns true if action is valid and action is completed
     # Possible actions: open_gripper, close_gripper, move_to_block, move_over_block
    
     if action == 'open_gripper':
+        # Shouldn't work if we're at the old stack, or the gripper is already open
         if msg.stack == 0 or msg.gripper_state == 0: 
             return False
         else:
-            msg.gripper_state = 0
+            msg.gripper_state = 0 # Sets gripper state to open
             gripper.open()
+            # Sleeps for a bit, to allow the gripper to open. Make sure this matches sleep in controller
             rate = rospy.Rate(.5)
             rate.sleep()
             print "opened gripper!"
             return True
 
     elif action == 'close_gripper':
+        # Shouldn't work if we're at the new stack, or the gripper is already closed
         if msg.gripper_state == 1 or msg.stack == 1:
             return False
         else:
-            msg.gripper_state = 1
+            msg.gripper_state = 1 # Sets gripper state to closed
             gripper.close()
+             # Sleeps for a bit, to allow the gripper to close. Make sure this matches sleep in controller
             rate = rospy.Rate(.5)
             rate.sleep()
             print "CLOSEd gripper!"
@@ -92,7 +99,8 @@ def handle_move_robot(req):
         if msg.gripper_state == 1 or msg.stack == 0:
             return False
         else:
-            msg.stack = 0
+            msg.stack = 0 # We're now going to the initial pile
+
             # move up to "over end stack"
             value = initial_pose['position']
             new_pose = limb.Point(value[0],value[1]+.25, value[2]+finger_length)
@@ -106,13 +114,15 @@ def handle_move_robot(req):
             limb.move_to_joint_positions(joints)
             
             # move down to next block
-            value = initial_pose['position']
-            new_pose = limb.Point(value[0],value[1], value[2]-rospy.get_param("/num_blocks_moved")*block_height)
+
+            targetblock = msg.block_positions[target]
+            new_pose = limb.Point(targetblock.x, targetblock.y, targetblock.z)
             joints = request_kinematics(new_pose, initial_pose['orientation'])
             limb.move_to_joint_positions(joints)
             
             return True
 
+    # Drop block off at new location. Should change State, blockposition after completion
     elif action == 'move_over_block':
         if msg.gripper_state == 0 or msg.stack == 1:
             return False
@@ -136,13 +146,25 @@ def handle_move_robot(req):
             # lower block to be over "target" block
             num_blocks = rospy.get_param("/num_blocks")
             num_blocks_moved = rospy.get_param("/num_blocks_moved")
-            pose = limb.endpoint_pose()
-            value = pose['position']
-            new_pose = limb.Point(value[0],value[1], value[2]-block_height*(num_blocks-num_blocks_moved-1)-finger_length)
+           
+            
+            
+
+            
+            targetblock = msg.block_positions[target]
+            newz = targetblock.z + block_height
+            
+            new_pose = limb.Point(targetblock.x,targetblock.y, newz)
             joints = request_kinematics(new_pose, initial_pose['orientation'])
             limb.move_to_joint_positions(joints)
             rospy.set_param("/num_blocks_moved",rospy.get_param("/num_blocks_moved")+1)
-           
+
+            #change state of block we're moving, which in this case is the block we're putting a block on + 1
+            movedblock = msg.block_positions[target+1]
+            movedblock.x = targetblock.x
+            movedblock.y = targetblock.y
+            movedblock.z = targetblock.z + block_height
+            msg.block_positions[target+1] = movedblock
             print "moved over block %s" %(req.target)
             return True
     else:
