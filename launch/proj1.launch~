@@ -2,7 +2,7 @@
 
 <launch>
   
-    <param name="num_blocks" value="4" />
+    <param name="num_blocks" value="3" />
     <param name="configuration" value="scattered" />
     <param name="num_blocks_moved" value='0' />
     <param name="dual_arm_mode" value='False' />
