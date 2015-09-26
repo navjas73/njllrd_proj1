@@ -37,6 +37,7 @@ def mode_selection(data):
             dual_odd_even()
         else: 
             print("Invalid mode")
+                    
     
 
 # Initiates request to move_robot service (handled by robot interface server)
@@ -53,6 +54,20 @@ def request_movement(action, target):
     
 def scatter():
     # Code for moving blocks with scattered orientation
+    num_blocks = rospy.get_param("/num_blocks")
+    rate = rospy.Rate(.5)
+    for i in range(0,num_blocks):
+        request_movement("close_gripper", 1)
+        rate.sleep()
+        print("move over block" + str(-i-1))
+        request_movement("move_over_block", -i-1) # virtual block (table)
+        rate.sleep()
+        request_movement("open_gripper", 1)
+        rate.sleep()
+        if i != (num_blocks-1):
+            print("move to block" + str(i+2))
+            request_movement("move_to_block",i+2)
+            rate.sleep()
     return
 
 def stack_ascending():

@@ -24,8 +24,11 @@ limb = None
 finger_length = None
 block_height = None
 msg = None
-
-
+xpos = None
+ypos = None
+zpos = None
+xcounter = 1
+ycounter = 1
 
 # Handler needs to be changed for two arm version
 # I think we should have the same handler with a directional component based on the arm that's supposed to be moved
@@ -33,6 +36,11 @@ msg = None
 def handle_move_robot(req):
     global first_run
     global initial_pose
+    global xpos
+    global ypos
+    global zpos
+    global xcounter
+    global ycounter
 
     # Initialization of block positions, if this is the first request we're receiving
     if first_run == 1:
@@ -42,6 +50,13 @@ def handle_move_robot(req):
         fpose = initial_pose
         print(initial_pose)
         
+
+        xpos = fpose['position'][0] 
+        ypos = fpose['position'][1]+.25
+        zpos = fpose['position'][2]-rospy.get_param("/num_blocks")*block_height
+
+
+
         #set state of block 0 -- table underneath final stack
         block = blockposition()
         block.x = fpose['position'][0]
@@ -62,7 +77,6 @@ def handle_move_robot(req):
             msg.block_positions.append(block)   # adds block to block_positions array (in state msg)      
         
         first_run = 0 # makes sure we don't go into initialization step again
-    
         
     action = req.action
     target = req.target
@@ -99,7 +113,7 @@ def handle_move_robot(req):
 
     elif action == 'move_to_block':
         if msg.gripper_state == 1 or msg.stack == 0:
-            return False
+            return Falsepositions
         else:
             msg.stack = 0 # We're now going to the initial pile
 
@@ -125,6 +139,13 @@ def handle_move_robot(req):
             
             return True
 
+    
+
+
+
+
+
+
     # Drop block off at new location. Should change State, blockposition after completion
     elif action == 'move_over_block':
         if msg.gripper_state == 0 or msg.stack == 1:
@@ -139,49 +160,102 @@ def handle_move_robot(req):
             limb.move_to_joint_positions(joints,threshold = .004)
             #print initial_pose
             
-	        # move over to "over end stack"
-            pose = limb.endpoint_pose()
-            value = pose['position']
-            new_pose = limb.Point(value[0],value[1] + .25, value[2])
-            joints = request_kinematics(new_pose, initial_pose['orientation'])
-            limb.move_to_joint_positions(joints,threshold = .004)
+            if target < 0:
+                # move over to "over desired location"
+                if xcounter == 2:
+                    xcounter = 0
+                    ycounter = ycounter+1
 
-            # lower block to be over "target" block
-            num_blocks = rospy.get_param("/num_blocks")
-            num_blocks_moved = rospy.get_param("/num_blocks_moved")
-           
-            
-            
+                pose = limb.endpoint_pose()
+                value = pose['position']
+                new_pose = limb.Point(xpos+xcounter*.1,ypos+ycounter*.1, value[2])
+                
+                
+                print("initial position:")
+                print(pose['position'])
+                print("position to go to")
+                print(new_pose)
+                print(xcounter)
+                print(ycounter)
+                
+                joints = request_kinematics(new_pose, initial_pose['orientation'])
+                limb.move_to_joint_positions(joints,threshold = .004)
+                
+                
+                # Move down to desired spot
+                new_pose = limb.Point(xpos+xcounter*.1,ypos+ycounter*.1, zpos)
+                joints = request_kinematics(new_pose, initial_pose['orientation'])
+                limb.move_to_joint_positions(joints,threshold = .004)
+                
 
-            
-            targetblock = msg.block_positions[target]
-            newz = targetblock.z + block_height
-            
-            new_pose = limb.Point(targetblock.x,targetblock.y, newz)
-            joints = request_kinematics(new_pose, initial_pose['orientation'])
-            limb.move_to_joint_positions(joints,threshold = .004)
-            rospy.set_param("/num_blocks_moved",rospy.get_param("/num_blocks_moved")+1)
 
-            current_pose = limb.endpoint_pose()
-            print "Desired Pose"
-            print(new_pose)
-            print "Actual Pose"
-            print(current_pose)
+                print("initial position:")
+                print(pose['position'])
+                print("position to go to")
+                print(new_pose)
+                print(xcounter)
+                print(ycounter)
 
-            #change state of block we're moving, which in this case is the block we're putting a block on + 1
-            movedblock = msg.block_positions[target+1]
-            movedblock.x = targetblock.x
-            movedblock.y = targetblock.y
-            movedblock.z = targetblock.z + block_height
-            msg.block_positions[target+1] = movedblock
-            print "moved over block %s" %(req.target)
-            return True
+                xcounter = xcounter+1
+
+            else:
+	            # move over to "over end stack"
+                pose = limb.endpoint_pose()
+                value = pose['position']
+                new_pose = limb.Point(value[0],value[1] + .25, value[2])
+                joints = request_kinematics(new_pose, initial_pose['orientation'])
+                limb.move_to_joint_positions(joints,threshold = .004)
+
+                # lower block to be over "target" block
+                num_blocks = rospy.get_param("/num_blocks")
+                num_blocks_moved = rospy.get_param("/num_blocks_moved")
+
+                targetblock = msg.block_positions[target]
+                newz = targetblock.z + block_height
+                
+                new_pose = limb.Point(targetblock.x,targetblock.y, newz)
+                joints = request_kinematics(new_pose, initial_pose['orientation'])
+                limb.move_to_joint_positions(joints,threshold = .004)
+                rospy.set_param("/num_blocks_moved",rospy.get_param("/num_blocks_moved")+1)
+
+                current_pose = limb.endpoint_pose()
+                print "Desired Pose"
+                print(new_pose)
+                print "Actual Pose"
+                print(current_pose)
+
+                #change state of block we're moving, which in this case is the block we're putting a block on + 1
+                movedblock = msg.block_positions[target+1]
+                movedblock.x = targetblock.x
+                movedblock.y = targetblock.y
+                movedblock.z = targetblock.z + block_height
+                msg.block_positions[target+1] = movedblock
+                print "moved over block %s" %(req.target)
+                return True
     else:
         return False
-
-
     # Returns false if action is invalid or action fails
-    # else return False
+    # else return False  print(initial_pose)
+        
+
+    print "gripper: %s, stack: %s" %(msg.gripper_state, msg.stack)
+    # Returns true if action is valid and action is completed
+    # Possible actions: open_gripper, close_gripper, move_to_block, move_over_block
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 def request_kinematics(position, quaternion):
     # rospy.init_node("rsdk_ik_service_client")
