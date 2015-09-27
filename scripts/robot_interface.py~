@@ -260,7 +260,7 @@ def handle_move_robot(req):
                     movedblock.z = targetblock.z + block_height
                     msg.block_positions[target+1] = movedblock
                 elif rospy.get_param("/current_mode") == "stack_descending":
-                    #change state of block we're moving, which in this case is the block we're putting a block on - 1
+                    #change state of block we're moving, which in this case is the block we're putting a block on + 1
                     movedblock = msg.block_positions[target-1]
                     movedblock.x = targetblock.x
                     movedblock.y = targetblock.y

@@ -149,7 +149,7 @@ def dual_scatter():
     return
 
 def dual_stack_ascending():
-   return
+   
         
 
 def dual_stack_descending():
