@@ -9,5 +9,3 @@ limb = baxter_interface.Limb('right')
 gripper.calibrate()
 limb.move_to_neutral()
 
-# rosrun baxter_tools enable_robot.py -e
-

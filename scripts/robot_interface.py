@@ -149,13 +149,13 @@ def handle_move_robot(req):
 
                 # move up to "over end stack"
                 value = initial_pose['position']
-                new_pose = limb.Point(value[0],value[1]+.25, value[2]+finger_length)
+                new_pose = limb.Point(msg.block_positions[0].x,msg.block_positions[0].y, value[2]+finger_length)
                 joints = request_kinematics(new_pose, initial_pose['orientation'])
                 limb.move_to_joint_positions(joints,threshold = .004)
                 
                 # move up to "over initial stack"
                 value = initial_pose['position']
-                new_pose = limb.Point(value[0],value[1], value[2]+finger_length)
+                new_pose = limb.Point(msg.block_positions[target].x,msg.block_positions[target].y, value[2]+finger_length)
                 joints = request_kinematics(new_pose, initial_pose['orientation'])
                 limb.move_to_joint_positions(joints,threshold = .004)
                 
@@ -180,7 +180,9 @@ def handle_move_robot(req):
             #print initial_pose
             # move up to "over initial stack"
             value = initial_pose['position']
-            new_pose = limb.Point(value[0],value[1], value[2]+finger_length)
+            current_pose = limb.endpoint_pose()
+            current_pose = current_pose['position']
+            new_pose = limb.Point(current_pose[0],current_pose[1], value[2]+finger_length)
             joints = request_kinematics(new_pose, initial_pose['orientation'])
             limb.move_to_joint_positions(joints,threshold = .004)
             #print initial_pose
@@ -230,13 +232,13 @@ def handle_move_robot(req):
 	            # move over to "over end stack"
                 pose = limb.endpoint_pose()
                 value = pose['position']
-                new_pose = limb.Point(value[0],value[1] + .25, value[2])
+                new_pose = limb.Point(msg.block_positions[0].x,msg.block_positions[0].y, value[2])
                 joints = request_kinematics(new_pose, initial_pose['orientation'])
                 limb.move_to_joint_positions(joints,threshold = .004)
 
                 # lower block to be over "target" block
                 num_blocks = rospy.get_param("/num_blocks")
-                num_blocks_moved = rospy.get_param("/num_blocks_moved")
+                # num_blocks_moved = rospy.get_param("/num_blocks_moved")
 
                 targetblock = msg.block_positions[target]
                 newz = targetblock.z + block_height
@@ -244,7 +246,7 @@ def handle_move_robot(req):
                 new_pose = limb.Point(targetblock.x,targetblock.y, newz)
                 joints = request_kinematics(new_pose, initial_pose['orientation'])
                 limb.move_to_joint_positions(joints,threshold = .004)
-                rospy.set_param("/num_blocks_moved",rospy.get_param("/num_blocks_moved")+1)
+                # rospy.set_param("/num_blocks_moved",rospy.get_param("/num_blocks_moved")+1)
 
                 current_pose = limb.endpoint_pose()
                 print "Desired Pose"
