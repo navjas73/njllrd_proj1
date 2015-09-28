@@ -121,6 +121,8 @@ def handle_move_robot(req):
                 left_gripper.open()
             else:
                 gripper.open()
+
+            move_left_limb = -move_left_limb
             # Sleeps for a bit, to allow the gripper to open. Make sure this matches sleep in controller
             rate = rospy.Rate(.5)
             rate.sleep()
@@ -162,11 +164,12 @@ def handle_move_robot(req):
                 current_pose = current_pose['position']
                 if dual_arm_mode == True:
                     new_pose = limb.Point(current_pose[0],current_pose[1]+move_left_limb*.20, value[2]+finger_length)
+                    joints = request_kinematics(new_pose, initial_pose['orientation'])
+                    limb.set_joint_positions(joints)
                 else:
                     new_pose = limb.Point(current_pose[0],current_pose[1], value[2]+finger_length)
-
-                joints = request_kinematics(new_pose, initial_pose['orientation'])
-                limb.move_to_joint_positions(joints,threshold = .004)
+                    joints = request_kinematics(new_pose, initial_pose['orientation'])
+                    limb.move_to_joint_positions(joints,threshold = .004)
                 
                 # move up to "over initial stack"
                 value = initial_pose['position']
@@ -198,11 +201,13 @@ def handle_move_robot(req):
             current_pose = limb.endpoint_pose()
             current_pose = current_pose['position']
             if dual_arm_mode == True:
-               new_pose = limb.Point(current_pose[0],current_pose[1]+move_left_limb*.20, value[2]+finger_length)
+                new_pose = limb.Point(current_pose[0],current_pose[1]+move_left_limb*.20, value[2]+finger_length)
+                joints = request_kinematics(new_pose, initial_pose['orientation'])
+                limb.set_joint_positions(joints)
             else:
-               new_pose = limb.Point(current_pose[0],current_pose[1], value[2]+finger_length)
-            joints = request_kinematics(new_pose, initial_pose['orientation'])
-            limb.move_to_joint_positions(joints,threshold = .004)
+                new_pose = limb.Point(current_pose[0],current_pose[1], value[2]+finger_length)
+                joints = request_kinematics(new_pose, initial_pose['orientation'])
+                limb.move_to_joint_positions(joints,threshold = .004)
             #print initial_pose
             
             if target < 0:
