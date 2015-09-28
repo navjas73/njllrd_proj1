@@ -77,8 +77,12 @@ def scatter():
         request_movement("open_gripper", 1)
         rate.sleep()
         if i != (num_blocks-1):
-            print("move to block" + str(i+2))
-            request_movement("move_to_block",i+2)
+            if rospy.get_param("/configuration") == "stacked_descending":
+                print("move to block" + str(i+2))
+                request_movement("move_to_block",i+2)
+            elif rospy.get_param("configuration") == "stacked_ascending":
+                print("move to block" + str(num_blocks - i -1))
+                request_movement("move_to_block",num_blocks - i - 1)
             rate.sleep()
     working = False
     print("Scatter Completed")

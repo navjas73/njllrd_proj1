@@ -17,11 +17,13 @@ from geometry_msgs.msg import (
 )
 
 gripper = None
+left_gripper = None
 first_run = None
 initial_pose = None
 left_initial_pose = None
 pub = None
 limb = None
+left_limb = None
 finger_length = None
 block_height = None
 msg = None
@@ -30,7 +32,7 @@ ypos = None
 zpos = None
 xcounter = 1
 ycounter = 1
-move_left_limb = False # False is for moving right arm, True is for moving left arm
+move_left_limb = -1 # -1 is for moving right arm, 1 is for moving left arm
 stack_switch = 1
 
 # Handler needs to be changed for two arm version
@@ -65,8 +67,8 @@ def handle_move_robot(req):
             left_initial_pose = left_limb.endpoint_pose()
         
 
-        xpos = fpose['position'][0] 
-        ypos = fpose['position'][1]+.25
+        xpos = fpose['position'][0]-.2
+        ypos = fpose['position'][1]+.1
         zpos = fpose['position'][2]-rospy.get_param("/num_blocks")*block_height+block_height
 
         #set state of block 0 -- table underneath final stack
@@ -115,7 +117,10 @@ def handle_move_robot(req):
             return False
         else:
             msg.gripper_state = 0 # Sets gripper state to open
-            gripper.open()
+            if move_left_limb == 1:
+                left_gripper.open()
+            else:
+                gripper.open()
             # Sleeps for a bit, to allow the gripper to open. Make sure this matches sleep in controller
             rate = rospy.Rate(.5)
             rate.sleep()
@@ -128,7 +133,10 @@ def handle_move_robot(req):
             return False
         else:
             msg.gripper_state = 1 # Sets gripper state to closed
-            gripper.close()
+            if move_left_limb == 1
+                left_gripper.close()
+            else: 
+                gripper.close()
              # Sleeps for a bit, to allow the gripper to close. Make sure this matches sleep in controller
             rate = rospy.Rate(.5)
             rate.sleep()
@@ -146,10 +154,17 @@ def handle_move_robot(req):
                 stack_switch = -stack_switch
             else:
                 msg.stack = 0 # We're now going to the initial pile
+             
 
                 # move up to "over end stack"
                 value = initial_pose['position']
-                new_pose = limb.Point(msg.block_positions[0].x,msg.block_positions[0].y, value[2]+finger_length)
+                current_pose = limb.endpoint_pose()
+                current_pose = current_pose['position']
+                if dual_arm_mode == True:
+                    new_pose = limb.Point(current_pose[0],current_pose[1]+move_left_limb*.20, value[2]+finger_length)
+                else:
+                    new_pose = limb.Point(current_pose[0],current_pose[1], value[2]+finger_length)
+
                 joints = request_kinematics(new_pose, initial_pose['orientation'])
                 limb.move_to_joint_positions(joints,threshold = .004)
                 
@@ -182,12 +197,16 @@ def handle_move_robot(req):
             value = initial_pose['position']
             current_pose = limb.endpoint_pose()
             current_pose = current_pose['position']
-            new_pose = limb.Point(current_pose[0],current_pose[1], value[2]+finger_length)
+            if dual_arm_mode == True:
+               new_pose = limb.Point(current_pose[0],current_pose[1]+move_left_limb*.20, value[2]+finger_length)
+            else:
+               new_pose = limb.Point(current_pose[0],current_pose[1], value[2]+finger_length)
             joints = request_kinematics(new_pose, initial_pose['orientation'])
             limb.move_to_joint_positions(joints,threshold = .004)
             #print initial_pose
             
             if target < 0:
+                ################### SCATTER #####################
                 # move over to "over desired location"
                 if xcounter == 2:
                     xcounter = 0
@@ -224,11 +243,26 @@ def handle_move_robot(req):
                 print(ycounter)
 
                 xcounter = xcounter+1
-
-
+                
+                if rospy.get_param('/configuration') == "stacked_descending":
+                    print "change block %s x from %s to %s" %(-target,msg.block_positions[-target].x,new_pose[0])
+                    msg.block_positions[-target].x = new_pose[0]
+                    print "change block %s y from %s to %s" %(-target,msg.block_positions[-target].y,new_pose[1])
+                    msg.block_positions[-target].y = new_pose[1]
+                    print "change block %s z from %s to %s" %(-target,msg.block_positions[-target].z,new_pose[2])
+                    msg.block_positions[-target].z = new_pose[2]
+                elif rospy.get_param('/configuration') == "stacked_ascending":
+                    num_blocks = rospy.get_param("/num_blocks")
+                    print "change block %s x from %s to %s" %(num_blocks+1+target,msg.block_positions[num_blocks+1+target].x,new_pose[0])
+                    msg.block_positions[num_blocks+1+target].x = new_pose[0]
+                    print "change block %s y from %s to %s" %(num_blocks+1+target,msg.block_positions[num_blocks+1+target].y,new_pose[1])
+                    msg.block_positions[num_blocks+1+target].y = new_pose[1]
+                    print "change block %s z from %s to %s" %(num_blocks+1+target,msg.block_positions[num_blocks+1+target].z,new_pose[2])
+                    msg.block_positions[num_blocks+1+target].z = new_pose[2]
                 #####CHANGE BLOCK POSITIONS IN STATE!!!
 
             else:
+                ############### NOT SCATTER ########################
 	            # move over to "over end stack"
                 pose = limb.endpoint_pose()
                 value = pose['position']
@@ -329,10 +363,14 @@ def broadcast_state():
     return True
     
 def setup_variables():
-    global gripper # declare global gripper
+    global gripper 
     gripper = baxter_interface.Gripper('right') #instantiate gripper
-    global limb # declare global limb
+    global left_gripper 
+    left_gripper = baxter_interface.Gripper('left') #instantiate left gripper
+    global limb 
     limb = baxter_interface.Limb('right') #instantiate limb
+    global left_limb 
+    left_limb = baxter_interface.Limb('left') #instantiate left limb
     global initial_pose
     global first_run
     first_run = 1
