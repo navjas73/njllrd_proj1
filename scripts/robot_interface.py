@@ -35,9 +35,6 @@ ycounter = 1
 move_left_limb = -1 # -1 is for moving right arm, 1 is for moving left arm
 stack_switch = 1
 
-# Handler needs to be changed for two arm version
-# I think we should have the same handler with a directional component based on the arm that's supposed to be moved
-
 def handle_move_robot(req):
     
     if rospy.get_param('/dual_arm_mode') == True:
@@ -71,6 +68,11 @@ def handle_move_robot(req):
         ypos = fpose['position'][1]+.1
         zpos = fpose['position'][2]-rospy.get_param("/num_blocks")*block_height+block_height
 
+       
+
+
+######################## SETUP BLOCK LOCATIONS ON FIRST RUN #########################
+
         #set state of block 0 -- table underneath final stack
         block = blockposition()
         block.x = fpose['position'][0]
@@ -103,7 +105,12 @@ def handle_move_robot(req):
         
         print(msg.block_positions)
         first_run = 0 # makes sure we don't go into initialization step again
-        
+###################### END OF FIRST RUN SETUP #################################
+
+
+
+
+
     action = req.action
     target = req.target
    
@@ -111,31 +118,46 @@ def handle_move_robot(req):
     # Returns true if action is valid and action is completed
     # Possible actions: open_gripper, close_gripper, move_to_block, move_over_block
    
+
+
+############################# OPEN GRIPPER ####################################
     if action == 'open_gripper':
         # Shouldn't work if we're at the old stack, or the gripper is already open
         if msg.stack == 0 or msg.gripper_state == 0: 
             return False
         else:
+            
             msg.gripper_state = 0 # Sets gripper state to open
-            if move_left_limb == 1:
+            
+            if target == 1:
                 left_gripper.open()
             else:
                 gripper.open()
 
-            move_left_limb = -move_left_limb
             # Sleeps for a bit, to allow the gripper to open. Make sure this matches sleep in controller
             rate = rospy.Rate(.5)
             rate.sleep()
             print "opened gripper!"
             return True
+########################### END OPEN GRIPPER ###################################
 
+
+
+
+
+
+
+
+
+############################## CLOSE GRIPPER ###################################
     elif action == 'close_gripper':
         # Shouldn't work if we're at the new stack, or the gripper is already closed
         if msg.gripper_state == 1 or msg.stack == 1:
             return False
         else:
             msg.gripper_state = 1 # Sets gripper state to closed
-            if move_left_limb == 1
+            
+            if target == 1:
                 left_gripper.close()
             else: 
                 gripper.close()
@@ -144,7 +166,14 @@ def handle_move_robot(req):
             rate.sleep()
             print "CLOSEd gripper!"
             return True
+############################ END CLOSE GRIPPER #################################
 
+
+
+
+
+
+############################### MOVE TO BLOCK ##################################
     elif action == 'move_to_block':
         if msg.gripper_state == 1 or msg.stack == 0:
             return Falsepositions
@@ -157,15 +186,28 @@ def handle_move_robot(req):
             else:
                 msg.stack = 0 # We're now going to the initial pile
              
+               
+                
 
                 # move up to "over end stack"
                 value = initial_pose['position']
                 current_pose = limb.endpoint_pose()
                 current_pose = current_pose['position']
                 if dual_arm_mode == True:
-                    new_pose = limb.Point(current_pose[0],current_pose[1]+move_left_limb*.20, value[2]+finger_length)
-                    joints = request_kinematics(new_pose, initial_pose['orientation'])
-                    limb.set_joint_positions(joints)
+                    even_odd_test = rospy.get_param("/num_blocks")%2
+                    if (target%2 == 0) and (target != 0 or even_odd_test):
+                        move_left_arm = -1
+                    else:
+                        move_left_arm = 1
+
+                    if move_left_arm:
+                        new_pose = limb.Point(current_pose[0],current_pose[1]+move_left_limb*.20, value[2]+finger_length)
+                        joints = request_kinematics(new_pose, initial_pose['orientation'])
+                        left_limb.move_to_joint_positions(joints)
+                    else:
+                        new_pose = limb.Point(current_pose[0],current_pose[1]+move_left_limb*.20, value[2]+finger_length)
+                        joints = request_kinematics(new_pose, initial_pose['orientation'])
+                        limb.move_to_joint_positions(joints)
                 else:
                     new_pose = limb.Point(current_pose[0],current_pose[1], value[2]+finger_length)
                     joints = request_kinematics(new_pose, initial_pose['orientation'])
@@ -185,10 +227,20 @@ def handle_move_robot(req):
                 new_pose = limb.Point(targetblock.x, targetblock.y, targetblock.z)
                 joints = request_kinematics(new_pose, initial_pose['orientation'])
                 limb.move_to_joint_positions(joints,threshold = .004)
-            
-            
+           
             return True
+############################# END MOVE TO BLOCK ###############################
 
+
+
+
+
+
+
+
+
+
+############################ MOVE OVER BLOCK ##################################
     # Drop block off at new location. Should change State, blockposition after completion
     elif action == 'move_over_block':
         if msg.gripper_state == 0 or msg.stack == 1:
@@ -196,14 +248,31 @@ def handle_move_robot(req):
         else:
             msg.stack = 1
             #print initial_pose
-            # move up to "over initial stack"
+            
             value = initial_pose['position']
             current_pose = limb.endpoint_pose()
             current_pose = current_pose['position']
+            
             if dual_arm_mode == True:
-                new_pose = limb.Point(current_pose[0],current_pose[1]+move_left_limb*.20, value[2]+finger_length)
-                joints = request_kinematics(new_pose, initial_pose['orientation'])
-                limb.set_joint_positions(joints)
+
+                if target%2 == 0:
+                    move_left_arm = -1
+                else:
+                    move_left_arm = 1
+
+                # move up to "over initial stack"
+                if move_left_arm:
+                    new_pose = limb.Point(current_pose[0],current_pose[1]+move_left_limb*.20, value[2]+finger_length)
+                    print("moving left limb to: ")
+                    print(new_pose)
+                    joints = request_kinematics(new_pose, initial_pose['orientation'])
+                    left_limb.move_to_joint_positions(joints)
+                else:
+                    new_pose = limb.Point(current_pose[0],current_pose[1]+move_left_limb*.20, value[2]+finger_length)
+                    print("moving right limb to: ")
+                    print(new_pose)
+                    joints = request_kinematics(new_pose, initial_pose['orientation'])
+                    limb.move_to_joint_positions(joints)
             else:
                 new_pose = limb.Point(current_pose[0],current_pose[1], value[2]+finger_length)
                 joints = request_kinematics(new_pose, initial_pose['orientation'])
@@ -264,7 +333,7 @@ def handle_move_robot(req):
                     msg.block_positions[num_blocks+1+target].y = new_pose[1]
                     print "change block %s z from %s to %s" %(num_blocks+1+target,msg.block_positions[num_blocks+1+target].z,new_pose[2])
                     msg.block_positions[num_blocks+1+target].z = new_pose[2]
-                #####CHANGE BLOCK POSITIONS IN STATE!!!
+               
 
             else:
                 ############### NOT SCATTER ########################
@@ -310,11 +379,17 @@ def handle_move_robot(req):
 
                 print "moved over block %s" %(req.target)
                 return True
+########################### END MOVE OVER BLOCK ###############################
+
+
+
+
     else:
         return False
     # Returns false if action is invalid or action fails
     # else return False  print(initial_pose)
         
+
 
     print "gripper: %s, stack: %s" %(msg.gripper_state, msg.stack)
     # Returns true if action is valid and action is completed
