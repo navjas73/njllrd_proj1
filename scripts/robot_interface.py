@@ -73,15 +73,28 @@ def handle_move_robot(req):
 
 ######################## SETUP BLOCK LOCATIONS ON FIRST RUN #########################
 
-        #set state of block 0 -- table underneath final stack
-        block = blockposition()
-        block.x = fpose['position'][0]
-        # moved over .25m
-        block.y = fpose['position'][1]+.25 
-        # moved down num_blocks*block_height
-        block.z = fpose['position'][2]-rospy.get_param("/num_blocks")*block_height
-        msg.block_positions.append(block)
-        print(block)
+
+        if dual_arm_mode:
+            #set state of block 0 -- table underneath final stack
+            block = blockposition()
+            block.x = fpose['position'][0]+.20
+            # moved over .25m
+            block.y = fpose['position'][1]
+            # moved down num_blocks*block_height
+            block.z = fpose['position'][2]-rospy.get_param("/num_blocks")*block_height
+            msg.block_positions.append(block)
+            print(block)
+        else:
+            #set state of block 0 -- table underneath final stack
+            block = blockposition()
+            block.x = fpose['position'][0]
+            # moved over .25m
+            block.y = fpose['position'][1]+.25 
+            # moved down num_blocks*block_height
+            block.z = fpose['position'][2]-rospy.get_param("/num_blocks")*block_height
+            msg.block_positions.append(block)
+            print(block)
+        
         #set state of other blocks 
 
 
@@ -122,23 +135,30 @@ def handle_move_robot(req):
 
 ############################# OPEN GRIPPER ####################################
     if action == 'open_gripper':
+        if target == -1:
         # Shouldn't work if we're at the old stack, or the gripper is already open
-        if msg.stack == 0 or msg.gripper_state == 0: 
-            return False
-        else:
-            
-            msg.gripper_state = 0 # Sets gripper state to open
-            
-            if target == 1:
-                left_gripper.open()
+            if msg.stack == 0 or msg.gripper_state == 0: 
+                return False
             else:
                 gripper.open()
+                msg.gripper_state = 0 # Sets gripper state to open
+            
+           
+        elif target == 1:
+            if msg.left_gripper_state == 0:
+                return False
+            else:
+                left_gripper.open()
+                msg.left_gripper_state = 0
+        else:
+            return False
+        
 
             # Sleeps for a bit, to allow the gripper to open. Make sure this matches sleep in controller
-            rate = rospy.Rate(.5)
-            rate.sleep()
-            print "opened gripper!"
-            return True
+        rate = rospy.Rate(.5)
+        rate.sleep()
+        print "opened gripper!"
+        return True
 ########################### END OPEN GRIPPER ###################################
 
 
@@ -150,22 +170,31 @@ def handle_move_robot(req):
 
 
 ############################## CLOSE GRIPPER ###################################
-    elif action == 'close_gripper':
+    if action == 'close_gripper':
+        if target == -1:
         # Shouldn't work if we're at the new stack, or the gripper is already closed
-        if msg.gripper_state == 1 or msg.stack == 1:
-            return False
-        else:
-            msg.gripper_state = 1 # Sets gripper state to closed
-            
-            if target == 1:
-                left_gripper.close()
-            else: 
+            if msg.stack == 1 or msg.gripper_state == 1: 
+                return False
+            else:
                 gripper.close()
-             # Sleeps for a bit, to allow the gripper to close. Make sure this matches sleep in controller
-            rate = rospy.Rate(.5)
-            rate.sleep()
-            print "CLOSEd gripper!"
-            return True
+                msg.gripper_state = 1 # Sets gripper state to open
+            
+           
+        elif target == 1:
+            if msg.left_gripper_state == 1:
+                return False
+            else:
+                left_gripper.close()
+                msg.left_gripper_state = 1
+        else:
+            return False
+        
+
+            # Sleeps for a bit, to allow the gripper to close. Make sure this matches sleep in controller
+        rate = rospy.Rate(.5)
+        rate.sleep()
+        print "closed gripper!"
+        return True
 ############################ END CLOSE GRIPPER #################################
 
 
@@ -175,12 +204,16 @@ def handle_move_robot(req):
 
 ############################### MOVE TO BLOCK ##################################
     elif action == 'move_to_block':
-        if msg.gripper_state == 1 or msg.stack == 0:
-            return Falsepositions
+        if 1 == 0:  #msg.gripper_state == 1 or msg.stack == 0:
+            return "False    positions"
         else:
             num_blocks = rospy.get_param('/num_blocks')
             if (target>num_blocks or target<1):
-                msg.block_positions[0].y = msg.block_positions[0].y-stack_switch*.25
+                if dual_arm_mode:
+                    msg.block_positions[0].x = msg.block_positions[0].x-stack_switch*.20
+                      
+                else:
+                    msg.block_positions[0].y = msg.block_positions[0].y-stack_switch*.25
                 msg.stack = 0
                 stack_switch = -stack_switch
             else:
@@ -193,30 +226,31 @@ def handle_move_robot(req):
                 value = initial_pose['position']
                 current_pose = limb.endpoint_pose()
                 current_pose = current_pose['position']
+               
                 if dual_arm_mode == True:
-                    even_odd_test = rospy.get_param("/num_blocks")%2
-                    if (target%2 == 0) and (target != 0 or even_odd_test):
-                        move_left_arm = -1
-                    else:
-                        move_left_arm = 1
 
-                    if move_left_arm:
+                    if target%2 == 0:
+                        move_left_limb = -1
+                    else:
+                        move_left_limb = 1
+
+                    if move_left_limb == 1:
                         new_pose = limb.Point(current_pose[0],current_pose[1]+move_left_limb*.20, value[2]+finger_length)
-                        joints = request_kinematics(new_pose, initial_pose['orientation'])
+                        joints = request_kinematics(new_pose, initial_pose['orientation'],'left')
                         left_limb.move_to_joint_positions(joints)
                     else:
                         new_pose = limb.Point(current_pose[0],current_pose[1]+move_left_limb*.20, value[2]+finger_length)
-                        joints = request_kinematics(new_pose, initial_pose['orientation'])
+                        joints = request_kinematics(new_pose, initial_pose['orientation'],'right')
                         limb.move_to_joint_positions(joints)
                 else:
                     new_pose = limb.Point(current_pose[0],current_pose[1], value[2]+finger_length)
-                    joints = request_kinematics(new_pose, initial_pose['orientation'])
+                    joints = request_kinematics(new_pose, initial_pose['orientation'],'right')
                     limb.move_to_joint_positions(joints,threshold = .004)
                 
                 # move up to "over initial stack"
                 value = initial_pose['position']
                 new_pose = limb.Point(msg.block_positions[target].x,msg.block_positions[target].y, value[2]+finger_length)
-                joints = request_kinematics(new_pose, initial_pose['orientation'])
+                joints = request_kinematics(new_pose, initial_pose['orientation'],')
                 limb.move_to_joint_positions(joints,threshold = .004)
                 
                 # move down to next block
@@ -243,7 +277,7 @@ def handle_move_robot(req):
 ############################ MOVE OVER BLOCK ##################################
     # Drop block off at new location. Should change State, blockposition after completion
     elif action == 'move_over_block':
-        if msg.gripper_state == 0 or msg.stack == 1:
+        if 1 == 0: #msg.gripper_state == 0 or msg.stack == 1:
             return False
         else:
             msg.stack = 1
@@ -253,29 +287,42 @@ def handle_move_robot(req):
             current_pose = limb.endpoint_pose()
             current_pose = current_pose['position']
             
+            
             if dual_arm_mode == True:
-
-                if target%2 == 0:
-                    move_left_arm = -1
+                even_odd_test = rospy.get_param("/num_blocks")%2
+                if (target%2 == 0) and (target != 0 or even_odd_test):
+                    move_left_limb = 1
                 else:
-                    move_left_arm = 1
+                    move_left_limb = -1
+            
+            
+            
+           
 
-                # move up to "over initial stack"
-                if move_left_arm:
+                
+                if move_left_limb == 1:
+                    # move up to "over initial stack"
                     new_pose = limb.Point(current_pose[0],current_pose[1]+move_left_limb*.20, value[2]+finger_length)
                     print("moving left limb to: ")
                     print(new_pose)
-                    joints = request_kinematics(new_pose, initial_pose['orientation'])
+                    joints = request_kinematics(new_pose, left_initial_pose['orientation'],'left')
+                    print joints
                     left_limb.move_to_joint_positions(joints)
+                    
+                    
+                    
+                    
                 else:
+                    # move up to "over initial stack"
                     new_pose = limb.Point(current_pose[0],current_pose[1]+move_left_limb*.20, value[2]+finger_length)
                     print("moving right limb to: ")
                     print(new_pose)
-                    joints = request_kinematics(new_pose, initial_pose['orientation'])
+                    joints = request_kinematics(new_pose, initial_pose['orientation'],'right')
                     limb.move_to_joint_positions(joints)
+                    
             else:
                 new_pose = limb.Point(current_pose[0],current_pose[1], value[2]+finger_length)
-                joints = request_kinematics(new_pose, initial_pose['orientation'])
+                joints = request_kinematics(new_pose, initial_pose['orientation'],'right')
                 limb.move_to_joint_positions(joints,threshold = .004)
             #print initial_pose
             
@@ -337,10 +384,12 @@ def handle_move_robot(req):
 
             else:
                 ############### NOT SCATTER ########################
+                  
+                targetblock = msg.block_positions[target]
 	            # move over to "over end stack"
                 pose = limb.endpoint_pose()
                 value = pose['position']
-                new_pose = limb.Point(msg.block_positions[0].x,msg.block_positions[0].y, value[2])
+                new_pose = limb.Point(targetblock.x,targetblock.y, value[2])
                 joints = request_kinematics(new_pose, initial_pose['orientation'])
                 limb.move_to_joint_positions(joints,threshold = .004)
 
@@ -405,9 +454,9 @@ def handle_move_robot(req):
 
 
 
-def request_kinematics(position, quaternion):
+def request_kinematics(position, quaternion,limb):
     # rospy.init_node("rsdk_ik_service_client")
-    ns = "ExternalTools/" + "right" + "/PositionKinematicsNode/IKService"
+    ns = "ExternalTools/" + limb + "/PositionKinematicsNode/IKService"
     iksvc = rospy.ServiceProxy(ns, SolvePositionIK) 
     ikreq = SolvePositionIKRequest()
     hdr = Header(stamp=rospy.Time.now(), frame_id='base') 
@@ -415,9 +464,13 @@ def request_kinematics(position, quaternion):
         'right': PoseStamped(
             header = hdr,
             pose = Pose(position,quaternion)
-        )
+            ),
+        'left': PoseStamped(
+            header = hdr,
+            pose = Pose(position,quaternion)
+            ),
     }
-    ikreq.pose_stamp.append(poses['right'])
+    ikreq.pose_stamp.append(poses[limb])
     #print ikreq
     try:
         rospy.wait_for_service(ns, 5.0)

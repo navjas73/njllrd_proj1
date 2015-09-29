@@ -69,12 +69,12 @@ def scatter():
     num_blocks = rospy.get_param("/num_blocks")
     rate = rospy.Rate(.5)
     for i in range(0,num_blocks):
-        request_movement("close_gripper", 1)
+        request_movement("close_gripper", -1)
         rate.sleep()
         print("move over block" + str(-i-1))
         request_movement("move_over_block", -i-1) # virtual block (table)
         rate.sleep()
-        request_movement("open_gripper", 1)
+        request_movement("open_gripper", -1)
         rate.sleep()
         if i != (num_blocks-1):
             if rospy.get_param("/configuration") == "stacked_descending":
@@ -97,12 +97,12 @@ def stack_ascending():
     num_blocks = rospy.get_param("/num_blocks")
     rate = rospy.Rate(.5)
     for i in range(0,num_blocks):
-        request_movement("close_gripper", 1)
+        request_movement("close_gripper", -1)
         rate.sleep()
         print("move over block" + str(i))
         request_movement("move_over_block", i) 
         rate.sleep()
-        request_movement("open_gripper", 1)
+        request_movement("open_gripper", -1)
         rate.sleep()
         print("move to block" + str(i+2))
         request_movement("move_to_block",i+2)
@@ -121,7 +121,7 @@ def stack_descending():
     rate = rospy.Rate(.5)
     for i in range(num_blocks-1,-1,-1):
         
-        request_movement("close_gripper", 1)
+        request_movement("close_gripper", -1)
         rate.sleep()
 
         if i == num_blocks-1:
@@ -131,7 +131,7 @@ def stack_descending():
             print("move over block" + str(i+2))
             request_movement("move_over_block", i+2) 
         rate.sleep()
-        request_movement("open_gripper", 1)
+        request_movement("open_gripper", -1)
         rate.sleep()
         print("move to block" + str(i))
         request_movement("move_to_block", i)
@@ -158,7 +158,20 @@ def dual_stack_ascending():
 
 def dual_stack_descending():
     # Code for stack_descending blocks with stacked ascending orientation
+    rate = rospy.Rate(.5)
 
+
+    request_movement("close_gripper", -1)
+    request_movement("close_gripper", 1)
+    request_movement("move_over_block", 0)
+    request_movement("move_over_block", 4)
+    request_movement("open_gripper", -1)
+    request_movement("open_gripper", 1)
+    request_movement("move_to_block", 2)
+    request_movement("move_to_block", 1)
+        
+
+        
 
 
 

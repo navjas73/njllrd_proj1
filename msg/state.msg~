@@ -1,8 +1,8 @@
+# Number of blocks on table
+# int64 number_blocks
+
 # Gripper open (0) or closed (1)
 int64 gripper_state 
-
-# Left Gripper open (0) or closed (1)
-int64 left_gripper_state 
 
 # Initial stack (0) or final stack (1)
 int64 stack

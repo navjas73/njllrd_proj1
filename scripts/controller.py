@@ -162,12 +162,19 @@ def dual_stack_descending():
 
 
     request_movement("close_gripper", -1)
+    rate.sleep()
     request_movement("close_gripper", 1)
+    rate.sleep()
     request_movement("move_over_block", 0)
+    rate.sleep()
     request_movement("move_over_block", 4)
+    rate.sleep()
     request_movement("open_gripper", -1)
+    rate.sleep()
     request_movement("open_gripper", 1)
+    rate.sleep()
     request_movement("move_to_block", 2)
+    rate.sleep()
     request_movement("move_to_block", 1)
         
 
