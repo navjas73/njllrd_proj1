@@ -359,7 +359,7 @@ def setup_block_positions():
     initial_pose = limb.endpoint_pose()
     fpose = initial_pose
     
-    raised_height = fpose['position'][2]+finger_length
+    
 
     # gets initial pose of left arm, if dual arm mode
     if dual_arm_mode == True:
@@ -395,6 +395,7 @@ def setup_block_positions():
 
         if rospy.get_param('/configuration') == "stacked_descending":
             fpose = left_initial_pose
+           	raised_height = fpose['position'][2]+finger_length
             #Set position of blocks if initial config = stacked descending
             for i in range(0,rospy.get_param("/num_blocks")):
                 block = blockposition() # makes new instance of blockposition msg
@@ -405,8 +406,10 @@ def setup_block_positions():
         elif rospy.get_param('/configuration') == "stacked_ascending":
             if test:
                 fpose = left_initial_pose
+                raised_height = fpose['position'][2]+finger_length
             else:
                 fpose = initial_pose
+                raised_height = fpose['position'][2]+finger_length
 
             #Set position of blocks if initial config = stacked ascending
             # Take note of reverse loop to set blocks in correct index of block_positions array 
