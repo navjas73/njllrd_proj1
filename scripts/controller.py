@@ -96,6 +96,8 @@ def stack_ascending():
     # Code for stack_ascending with stacked descending orientation
     num_blocks = rospy.get_param("/num_blocks")
     rate = rospy.Rate(.5)
+    request_movement("move_to_block", 1)
+    rate.sleep()
     for i in range(0,num_blocks):
         request_movement("close_gripper", -1)
         rate.sleep()
@@ -119,8 +121,9 @@ def stack_descending():
     rospy.set_param("/current_mode", "stack_descending")
     num_blocks = rospy.get_param("/num_blocks")
     rate = rospy.Rate(.5)
-    for i in range(num_blocks-1,-1,-1):
-        
+    request_movement("move_to_block", num_blocks)
+    rate.sleep()
+    for i in range(num_blocks-1,-1,-1):   
         request_movement("close_gripper", -1)
         rate.sleep()
 
@@ -149,19 +152,110 @@ def odd_even():
     return
 
 def dual_scatter():
+    global working
+    working = True
+    rospy.set_param("/current_mode", "scatter")
     # Code for moving blocks with scattered orientation
-    return
+    num_blocks = rospy.get_param("/num_blocks")
+    rate = rospy.Rate(.5)
+    for i in range(1,num_blocks+1,2):
+        request_movement("close_gripper", -1)
+        rate.sleep()
+        request_movement("close_gripper", 1)
+        rate.sleep()
+        if i < num_blocks + 1:
+            request_movement("move_over_block", -i) # virtual block (table)
+            rate.sleep()
+        if i+1 < num_blocks + 1:
+            request_movement("move_over_block", -i-1) # virtual block (table)
+            rate.sleep()
+        request_movement("open_gripper", -1)
+        rate.sleep()
+        request_movement("open_gripper", -1)
+        rate.sleep()
+        if rospy.get_param("/configuration") == "stacked_descending":
+            if i+2 < num_blocks+1:
+                request_movement("move_to_block",(i+2))
+                rate.sleep()
+            if i+3 < num_blocks+1:
+                request_movement("move_to_block",(i+3))
+                rate.sleep()
+        elif rospy.get_param("/configuration") == "stacked_ascending":
+            if num_blocks - i -1 < num_blocks+1:
+                request_movement("move_to_block",(num_blocks - i -1))
+                rate.sleep()
+            if num_blocks - i -2 < num_blocks+1:
+                request_movement("move_to_block",(num_blocks - i -2))
+                rate.sleep()
+
+    working = False
+    print("Scatter Completed")
+    rospy.set_param('/configuration',"scattered")
 
 def dual_stack_ascending():
-   return
-        
+    global working
+    working = True
+    rate = rospy.Rate(0.5)
+    num_blocks = rospy.get_param("/num_blocks")
+    for i in range(1,num_blocks,2):
+        request_movement("close_gripper",-1) 
+        rate.sleep()
+        request_movement("close_gripper",1)
+        rate.sleep()
+        if i-1 < num_blocks:
+            request_movement("move_over_block",i-1)
+        rate.sleep()
+        if i < num_blocks:
+            request_movement("move_over_block",i)
+            rate.sleep()        
+        request_movement("open_gripper", -1)
+        rate.sleep()
+        request_movement("open_gripper", 1)
+        rate.sleep()
+        if i+2 < num_blocks + 1:
+            request_movement("move_to_block",i+2)
+            rate.sleep()
+        if i+3 < num_blocks + 1:
+            request_movement("move_to_block",i+3)
+            rate.sleep()
+    print("Dual Stack Ascending Completed")  
+    working = False
+    rospy.set_param('/configuration',"stacked_ascending")      
 
 def dual_stack_descending():
+    global working
+    working = True
     # Code for stack_descending blocks with stacked ascending orientation
     rate = rospy.Rate(.5)
+    num_blocks = rospy.get_param("/num_blocks")
+    for i in range(num_blocks,-1,-2):
+        request_movement("close_gripper",-1) 
+        rate.sleep()
+        request_movement("close_gripper",1)
+        rate.sleep()
+        if i == num_blocks:
+            request_movement("move_over_block",0)
+        elif i+1 > 1:
+            request_movement("move_over_block",i+1)
+        rate.sleep()
+        if i > 1:
+            request_movement("move_over_block",i)
+            rate.sleep()        
+        request_movement("open_gripper", -1)
+        rate.sleep()
+        request_movement("open_gripper", 1)
+        rate.sleep()
+        if i-2 > 0:
+            request_movement("move_to_block",i-2)
+            rate.sleep()
+        if i-3 > 0:
+            request_movement("move_to_block",i-3)
+            rate.sleep()
+    print("Dual Stack Descending Completed")
+    working = False
+    rospy.set_param('/configuration',"stacked_descending")
 
-
-    request_movement("close_gripper", -1)
+    ''' request_movement("close_gripper", -1)
     rate.sleep()
     request_movement("close_gripper", 1)
     rate.sleep()
@@ -175,7 +269,7 @@ def dual_stack_descending():
     rate.sleep()
     request_movement("move_to_block", 2)
     rate.sleep()
-    request_movement("move_to_block", 1)
+    request_movement("move_to_block", 1)'''
         
 
         
