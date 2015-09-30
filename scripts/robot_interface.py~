@@ -164,10 +164,11 @@ def handle_move_robot(req):
 ## Move up vertically only
 def move_up(side):
     success = True
-
+    global raised_height
     if side == 'right':
         current_pose = limb.endpoint_pose()
         current_pose = current_pose['position']
+        print raised_height
         new_pose = limb.Point(current_pose[0],current_pose[1], raised_height)
         joints = request_kinematics(new_pose, initial_pose['orientation'],'right')
         try:
@@ -190,9 +191,12 @@ def move_up(side):
 
 ## Move up and out
 def move_up_and_out(side):
+    global raised_height
     if side == 'right':
         current_pose = limb.endpoint_pose()
         current_pose = current_pose['position']
+        print "out distance for right"
+        print out_distance
         new_pose = limb.Point(current_pose[0],current_pose[1]-out_distance, raised_height)
         joints = request_kinematics(new_pose, initial_pose['orientation'], 'right')
         try:
@@ -202,6 +206,8 @@ def move_up_and_out(side):
     elif side == 'left':
         current_pose = left_limb.endpoint_pose()
         current_pose = current_pose['position']
+        print "out distance for left"
+        print out_distance
         new_pose = limb.Point(current_pose[0],current_pose[1]+out_distance, raised_height)
         joints = request_kinematics(new_pose, left_initial_pose['orientation'],'left')
         try:
@@ -224,11 +230,12 @@ def move_over_target(side, target):
 
     
     elif side == 'left':
-        
+        print target
+        print msg.block_positions
         targetblock = msg.block_positions[target]
         pose = left_limb.endpoint_pose()
         value = pose['position']
-        new_pose = limb.Point(targetblock.x,targetblock.y, value[2])
+        new_pose = limb.Point(targetblock.x,targetblock.y+.1, value[2])
         joints = request_kinematics(new_pose, left_initial_pose['orientation'], 'left')
         left_limb.move_to_joint_positions(joints)
 
@@ -246,9 +253,13 @@ def lower_over_target(side, target):
 
     
     elif side == 'left':
-        
+        print target
+        print msg.block_positions
         targetblock = msg.block_positions[target]
-        new_pose = limb.Point(targetblock.x,targetblock.y, targetblock.z + block_height)
+        pose = left_limb.endpoint_pose()
+        value = pose['position']
+        new_pose = limb.Point(value[0],value[1], targetblock.z + block_height)
+        #new_pose = limb.Point(targetblock.x,targetblock.y+1, targetblock.z + block_height)
         joints = request_kinematics(new_pose, left_initial_pose['orientation'], 'left')
         left_limb.move_to_joint_positions(joints)
 
@@ -268,7 +279,7 @@ def lower_to_target(side, target):
     elif side == 'left':
         
         targetblock = msg.block_positions[target]
-        new_pose = limb.Point(targetblock.x,targetblock.y, targetblock.z)
+        new_pose = limb.Point(targetblock.x,targetblock.y+.1, targetblock.z)
         joints = request_kinematics(new_pose, left_initial_pose['orientation'], 'left')
         left_limb.move_to_joint_positions(joints)
     return True
@@ -292,7 +303,7 @@ def scatter_block(side, target):
         if dual_arm_mode == True:
             new_pose = limb.Point(current_pose[0],current_pose[1]-dualcounter*0.1,current_pose[2])
         else:
-            new_pose = limb.Point(xpos+xcounter*.1,ypos-ycounter*.1, current_pose[2])
+            new_pose = limb.Point(xpos+xcounter*.1,ypos+ycounter*.1, current_pose[2])
         joints = request_kinematics(new_pose, initial_pose['orientation'], 'right')
         limb.move_to_joint_positions(joints)
 
@@ -310,12 +321,12 @@ def scatter_block(side, target):
         current_pose = left_limb.endpoint_pose()
         current_pose = current_pose['position']
         # Move over to desired spot
-        new_pose = limb.Point(current_pose[0],current_pose[1]+dualcounter*0.1,current_pose[2])
+        new_pose = limb.Point(current_pose[0],current_pose[1]+dualcounter*0.05,current_pose[2])
         joints = request_kinematics(new_pose, left_initial_pose['orientation'], 'left')
         left_limb.move_to_joint_positions(joints)
 
         # Move down to desired spot
-        new_pose = limb.Point(current_pose[0],current_pose[1]+dualcounter*0.1,zpos)
+        new_pose = limb.Point(current_pose[0],current_pose[1]+dualcounter*0.05,zpos)
         joints = request_kinematics(new_pose, left_initial_pose['orientation'], 'left')
         left_limb.move_to_joint_positions(joints)
                 
@@ -395,7 +406,7 @@ def setup_block_positions():
 
         if rospy.get_param('/configuration') == "stacked_descending":
             fpose = left_initial_pose
-           	raised_height = fpose['position'][2]+finger_length
+            raised_height = fpose['position'][2]+finger_length
             #Set position of blocks if initial config = stacked descending
             for i in range(0,rospy.get_param("/num_blocks")):
                 block = blockposition() # makes new instance of blockposition msg
@@ -438,6 +449,7 @@ def setup_block_positions():
         # If our starting configuration is stacked descending, we can loop through and set the location of blocks using the index of our array
         # If stacked ascending, we need a different loop to make sure the blocks are in the right position in our block_positions array
         if rospy.get_param('/configuration') == "stacked_descending":
+            raised_height = fpose['position'][2]+finger_length
             #Set position of blocks if initial config = stacked descending
             for i in range(0,rospy.get_param("/num_blocks")):
                 block = blockposition() # makes new instance of blockposition msg
@@ -446,6 +458,7 @@ def setup_block_positions():
                 block.z = fpose['position'][2]-block_height*i  # sets z of block to fpose (varies with current block)
                 msg.block_positions.append(block)   # adds block to block_positions array (in state msg)  
         elif rospy.get_param('/configuration') == "stacked_ascending":
+            raised_height = fpose['position'][2]+finger_length
             #Set position of blocks if initial config = stacked ascending
             # Take note of reverse loop to set blocks in correct index of block_positions array 
             for i in range(rospy.get_param("/num_blocks")-1,-1,-1):
@@ -498,12 +511,15 @@ def move_over_block(side, target):
             msg.block_positions[target+1] = movedblock
         elif rospy.get_param("/current_mode") == "stack_descending":
             #change state of block we're moving, which in this case is the block we're putting a block on - 1
+            print "target block - 0"
+            print targetblock
             movedblock = msg.block_positions[target-1]
             movedblock.x = targetblock.x
             movedblock.y = targetblock.y
             movedblock.z = targetblock.z + block_height
             msg.block_positions[target-1] = movedblock
-
+            print "new block position 4"
+            print msg.block_positions[4]
         success = True
 
     else:
@@ -653,6 +669,7 @@ def setup_variables():
     global msg
     msg = state()
     msg.gripper_state = 0 
+    msg.left_gripper_state = 0 
     msg.stack = 0
     global out_distance
     out_distance = .2
