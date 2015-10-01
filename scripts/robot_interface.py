@@ -283,14 +283,14 @@ def close_gripper_simulator(side):
 
 def move_to_block_simulator(side, target):
     if side == 'right':
-        if msg.gripper_state == 1 or msg.to_block == 1:
+        if msg.gripper_state == 1 or msg.to_block == 1 or msg.symbolic_block_positions[target].is_top == False:
             return False
         else:
             msg.to_block = 1   
             return True
 
     if side == 'left':
-        if msg.left_gripper_state == 1 or msg.left_to_block == 1:
+        if msg.left_gripper_state == 1 or msg.left_to_block == 1 or msg.symbolic_block_positions[target].is_top == False:
             return False
         else:
             msg.left_to_block = 1   
@@ -298,14 +298,43 @@ def move_to_block_simulator(side, target):
 
 def move_over_block_simulator(side, target):
     if side == 'right':
-        if msg.gripper_state == 0 or msg.to_block == 0:
+        if msg.gripper_state == 0 or msg.to_block == 0 or msg.symbolic_block_positions[target].is_top == False:
             return False
         else:
-            msg.to_block = 0   
+            msg.to_block = 0
+            
+            if rospy.get_param("/current_mode") == "stack_ascending":
+                #change state of block we're moving, which in this case is the block we're putting a block on + 1
+                movedblock = msg.symbolic_block_positions[target+1]
+                movedblock.stack = "even"
+                msg.symbolic_block_positions[target+1] = movedblock
+                
+                #change state of block we moved onto
+                movedblock = msg.symbolic_block_positions[target]
+                movedblock.is_top = False
+                msg.symbolic_block_positions[target] = movedblock
+                
+                #change state of block we moved off of
+                movedblock = msg.symbolic_block_positions[target+2]
+                movedblock.is_top = True
+                msg.symbolic_block_positions[target+2] = movedblock
+                
+            elif rospy.get_param("/current_mode") == "stack_descending":
+                #change state of block we're moving, which in this case is the block we're putting a block on - 1
+                print "target block - 0"
+                print targetblock
+                movedblock = msg.block_positions[target-1]
+                movedblock.x = targetblock.x
+                movedblock.y = targetblock.y
+                movedblock.z = targetblock.z + block_height
+                msg.block_positions[target-1] = movedblock
+                print "new block position 4"
+                print msg.block_positions[4]
+                
             return True
 
     if side == 'left':
-        if msg.left_gripper_state == 0 or msg.left_to_block == 0:
+        if msg.left_gripper_state == 0 or msg.left_to_block == 0 or msg.symbolic_block_positions[target].is_top == False:
             return False
         else:
             msg.left_to_block = 0   
