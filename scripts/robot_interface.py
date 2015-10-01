@@ -60,6 +60,33 @@ def handle_move_robot(req):
     simulator_mode = rospy.get_param('/simulator_mode')
 
     if simulator_mode:
+        if first_run:
+            #initialize block positions
+            num_blocks = rospy.get_param("/num_blocks")
+            configuration = rospy.get_param("/configuration")
+            
+            # set zero block at even/new position
+            block = symbolicblock()
+            block.is_top = True
+            block.stack = "even"
+            msg.symbolic_block_positions.append(block)
+            
+            # set the rest of block initial positions
+            block.is_top = False
+            block.stack = "initial"
+            for i in range(1, num_blocks-1):
+                msg.symbolic_block_positions.append(block)
+            
+            # set the state of the top block on initial pile
+            block.is_top = True
+            msg.symbolic_block_positions.append(block)
+            
+            # set n+1 block at odd position
+            block.stack = "odd"
+            msg.symbolic_block_positions.append(block)
+            
+            first_run = 0
+        
         if action == 'open_gripper':
             if target == -1:
                 success = open_gripper_simulator('right')
