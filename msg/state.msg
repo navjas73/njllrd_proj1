@@ -17,6 +17,6 @@ int64 to_block
 # Left gripper at a "new" block (1) or "old" block (0)
 int64 left_to_block
 
-
+symbolicblock[] symbolic_block_positions
 
 blockposition[] block_positions
