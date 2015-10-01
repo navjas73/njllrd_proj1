@@ -49,6 +49,7 @@ add_message_files(
   FILES
   state.msg
   blockposition.msg
+  symbolicblock.msg
 )
 
 ## Generate services in the 'srv' folder

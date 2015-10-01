@@ -12,6 +12,7 @@ working = False
 #   starts relevant process
 def mode_selection(data):
     dual_arm = rospy.get_param("/dual_arm_mode")
+    configuration = rospy.get_param("/configuration")
     if working == True:
         print "Cannot accept commands while moving"
     else:
@@ -31,17 +32,24 @@ def mode_selection(data):
                     stack_descending()
                 else:
                     print("Already stacked descending")
-            elif data.data == "odd_even":
-                odd_even()
             else: 
                 print("Invalid mode")
         else:
             if data.data == "scatter":
-                dual_scatter()
+                if configuration != "scattered":
+                    dual_scatter()
+                else:
+                    print "Already scattered"
             elif data.data == "stack_ascending":
-                dual_stack_ascending()
+                if configuration != "stacked_ascending":
+                    dual_stack_ascending()
+                else:
+                    print "Already stacked ascending"
             elif data.data == "stack_descending":
-                dual_stack_descending()
+                if configuration != "stacked_descending":
+                    dual_stack_descending()
+                else:
+                    print "Already stacked descending"
             elif data.data == "odd_even":
                 dual_odd_even()
             else: 
@@ -257,17 +265,46 @@ def dual_stack_descending():
     working = False
     rospy.set_param('/configuration',"stacked_descending")
 
-
-
-
-    # Code for stack_descending blocks with stacked descending orientation
     return
 
 def dual_odd_even():
-    return
+    num_blocks = rospy.get_param("/num_blocks")
+    configuration = rospy.get_param("/configuration")
 
-def read_state():
-    return
+    if configuration == "stacked_ascending":
+        for i in range(num_blocks, -1,-1):
+            request_movement("close_gripper",-1) 
+            rate.sleep()
+            request_movement("close_gripper",1)
+            rate.sleep()
+            if i == num_blocks and num_blocks%2 == 0:
+                request_movement("move_over_block", 0)
+            elif i == num_blocks:  
+                request_movement("move_over_block", num_blocks+1)
+            elif i == num_blocks-1 and num_blocks%2 == 0: 
+                request_movement("move_over_block", num_blocks+1)
+            elif i == num_blcoks-1:
+                request_movement("move_over_block", 0)
+            else:
+                request_movement("move_over_block", i+2)
+
+    elif configuration == "stacked_descending":
+        for i in range(1,num_blocks):
+            request_movement("close_gripper",-1) 
+            rate.sleep()
+            request_movement("close_gripper",1)
+            rate.sleep()
+            if i == 1:
+                request_movement("move_over_block", num_blocks+1)
+            elif i == 2:  
+                request_movement("move_over_block", 0)
+            else:
+                request_movement("move_over_block", i-2)
+        
+
+    return True
+
+
 
 def controller():
     rospy.init_node('controller')

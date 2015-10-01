@@ -43,7 +43,7 @@ right_limb_offset = None
 
 def handle_move_robot(req):
     
-    
+    global first_run
     global dual_arm_mode
 
     if rospy.get_param('/dual_arm_mode') == True:
@@ -139,7 +139,7 @@ def handle_move_robot(req):
 
 
     else:
-        global first_run
+        
 
         
         global xcounter
@@ -249,16 +249,18 @@ def open_gripper_simulator(side):
             return False
         else:
             msg.gripper_state = 0
+            print "opened right gripper"
             return True
 
-    elif side = 'left':
+    elif side == 'left':
         if msg.left_gripper_state == 0 or msg.left_to_block == 1:
             return False
         else: 
             msg.left_gripper_state = 0
+            print "opened left gripper"
             return True
 
-    else
+    else:
         return False
 
 
@@ -269,16 +271,18 @@ def close_gripper_simulator(side):
             return False
         else:
             msg.gripper_state = 1
+            print "closed right gripper"
             return True
 
-    elif side = 'left':
+    elif side == 'left':
         if msg.left_gripper_state == 1 or msg.left_to_block == 0:
             return False
         else: 
             msg.left_gripper_state = 1
+            print "closed left gripper"
             return True
 
-    else
+    else:
         return False
 
 def move_to_block_simulator(side, target):
@@ -286,14 +290,16 @@ def move_to_block_simulator(side, target):
         if msg.gripper_state == 1 or msg.to_block == 1 or msg.symbolic_block_positions[target].is_top == False:
             return False
         else:
-            msg.to_block = 1   
+            msg.to_block = 1
+            print "moved right arm to block: " + str(target) 
             return True
 
     if side == 'left':
         if msg.left_gripper_state == 1 or msg.left_to_block == 1 or msg.symbolic_block_positions[target].is_top == False:
             return False
         else:
-            msg.left_to_block = 1   
+            msg.left_to_block = 1
+            print "moved left arm to block: " + str(target)   
             return True
 
 def move_over_block_simulator(side, target):
@@ -310,6 +316,7 @@ def move_over_block_simulator(side, target):
                 movedblock.stack = "even"
                 msg.symbolic_block_positions[target+1] = movedblock
                 
+
                 #change state of block we moved onto
                 movedblock = msg.symbolic_block_positions[target]
                 movedblock.is_top = False
@@ -319,9 +326,11 @@ def move_over_block_simulator(side, target):
                 movedblock = msg.symbolic_block_positions[target+2]
                 movedblock.is_top = True
                 msg.symbolic_block_positions[target+2] = movedblock
+
+                print "moved block " + str(target+1) + "onto block" + str(target)
                 
             elif rospy.get_param("/current_mode") == "stack_descending":
-                #change state of block we're moving, which in this case is the block we're putting a block on - 1
+                #change state of block we're moving
                 if target == 0:
                     movedblock = msg.symbolic_block_positions[target-2]
                 else:
@@ -340,7 +349,7 @@ def move_over_block_simulator(side, target):
                 msg.symbolic_block_positions[target] = movedblock
                 
                 # change state of block we moved off of
-                 if target == 0:
+                if target == 0:
                     movedblock = msg.symbolic_block_positions[target-3]
                 else:
                     movedblock = msg.symbolic_block_positions[target-2]
@@ -351,9 +360,16 @@ def move_over_block_simulator(side, target):
                     msg.symbolic_block_positions[target-3] = movedblock
                 else:
                     msg.symbolic_block_positions[target-2] = movedblock
+
+
+                if target == 0:
+                    print "with right arm, moved block " + str(target-2) + "onto block" + str(target)
+                else:
+                    print "with right arm, moved block " + str(target-1) + "onto block" + str(target)
+
                 
                
-            elif rospy.get_param("/current_mode") == "scatter"
+            elif rospy.get_param("/current_mode") == "scatter":
             
                 if rospy.get_param("/configuration") == "stacked_descending":
                     #change state of block we're moving, which in this case is the block we're putting a block on + 1
@@ -365,25 +381,96 @@ def move_over_block_simulator(side, target):
                     movedblock = msg.symbolic_block_positions[target+2]
                     movedblock.is_top = True
                     msg.symbolic_block_positions[target+2] = movedblock
+                
+                    print "with right arm, moved block " + str(target+1) + "onto scatter"
                     
-                elif rospy.get_param("/current_mode") == "stacked_ascending":
-                #change state of block we're moving, which in this case is the block we're putting a block on - 1
+                elif rospy.get_param("/configuration") == "stacked_ascending":
+                
+
+                    if target == 0:
+                        movedblock = msg.symbolic_block_positions[target-2]
+                    else:
+                        movedblock = msg.symbolic_block_positions[target-1]
+                        
+                    
+                    movedblock.stack = "unique"
+                    
+                    if target == 0:
+                        msg.symbolic_block_positions[target-2] = movedblock
+                    else:
+                        msg.symbolic_block_positions[target-1] = movedblock
+                        
+                    
+                    
+                    # change state of block we moved off of
+                    if target == 0:
+                        movedblock = msg.symbolic_block_positions[target-3]
+                    else:
+                        movedblock = msg.symbolic_block_positions[target-2]
+                        
+                    movedblock.is_top = True
+                    
+                    if target == 0:
+                        msg.symbolic_block_positions[target-3] = movedblock
+                    else:
+                        msg.symbolic_block_positions[target-2] = movedblock
+
+
+
+
+                    if target == 0:
+                        print "With right arm, moved block " + str(target-2) + " onto block scatter"
+                    else:
+                        print "With right arm, moved block " + str(target-1) + " onto block scatter"
+                    
+            return True
+
+    if side == 'left':
+        if msg.left_gripper_state == 0 or msg.left_to_block == 0 or msg.symbolic_block_positions[target].is_top == False:
+            return False
+        else:
+            msg.left_to_block = 0  
+            
+            if rospy.get_param("/current_mode") == "stack_ascending":
+                #change state of block we're moving, which in this case is the block we're putting a block on + 1
+                movedblock = msg.symbolic_block_positions[target+1]
+                movedblock.stack = "even"
+                msg.symbolic_block_positions[target+1] = movedblock
+                
+
+                #change state of block we moved onto
+                movedblock = msg.symbolic_block_positions[target]
+                movedblock.is_top = False
+                msg.symbolic_block_positions[target] = movedblock
+                
+                #change state of block we moved off of
+                movedblock = msg.symbolic_block_positions[target+2]
+                movedblock.is_top = True
+                msg.symbolic_block_positions[target+2] = movedblock
+
+                print "with left, moved block " + str(target+1) + "onto block" + str(target)
+                
+            elif rospy.get_param("/current_mode") == "stack_descending":
+                #change state of block we're moving
                 if target == 0:
                     movedblock = msg.symbolic_block_positions[target-2]
                 else:
                     movedblock = msg.symbolic_block_positions[target-1]
                     
-                movedblock.stack = "unique"
+                movedblock.stack = "even"
                 
                 if target == 0:
                     msg.symbolic_block_positions[target-2] = movedblock
                 else:
                     msg.symbolic_block_positions[target-1] = movedblock
                     
-                
+                #change state of block we moved onto
+                movedblock = msg.symbolic_block_positions[target]
+                movedblock.is_top = False
+                msg.symbolic_block_positions[target] = movedblock
                 
                 # change state of block we moved off of
-                 if target == 0:
+                if target == 0:
                     movedblock = msg.symbolic_block_positions[target-3]
                 else:
                     movedblock = msg.symbolic_block_positions[target-2]
@@ -394,14 +481,69 @@ def move_over_block_simulator(side, target):
                     msg.symbolic_block_positions[target-3] = movedblock
                 else:
                     msg.symbolic_block_positions[target-2] = movedblock
-                    
-            return True
 
-    if side == 'left':
-        if msg.left_gripper_state == 0 or msg.left_to_block == 0 or msg.symbolic_block_positions[target].is_top == False:
-            return False
-        else:
-            msg.left_to_block = 0   
+
+                if target == 0:
+                    print "with left arm, moved block " + str(target-2) + "onto block" + str(target)
+                else:
+                    print "with left arm, moved block " + str(target-1) + "onto block" + str(target)
+
+                
+               
+            elif rospy.get_param("/current_mode") == "scatter":
+            
+                if rospy.get_param("/configuration") == "stacked_descending":
+                    #change state of block we're moving, which in this case is the block we're putting a block on + 1
+                    movedblock = msg.symbolic_block_positions[target+1]
+                    movedblock.stack = "unique"
+                    msg.symbolic_block_positions[target+1] = movedblock
+                    
+                    #change state of block we moved off of
+                    movedblock = msg.symbolic_block_positions[target+2]
+                    movedblock.is_top = True
+                    msg.symbolic_block_positions[target+2] = movedblock
+                
+                    print "with left arm, moved block " + str(target+1)+ "onto scatter"
+                    
+                elif rospy.get_param("/current_mode") == "stacked_ascending":
+                
+
+                    if target == 0:
+                        movedblock = msg.symbolic_block_positions[target-2]
+                    else:
+                        movedblock = msg.symbolic_block_positions[target-1]
+                        
+                    
+                    movedblock.stack = "unique"
+                    
+                    if target == 0:
+                        msg.symbolic_block_positions[target-2] = movedblock
+                    else:
+                        msg.symbolic_block_positions[target-1] = movedblock
+                        
+                    
+                    
+                    # change state of block we moved off of
+                    if target == 0:
+                        movedblock = msg.symbolic_block_positions[target-3]
+                    else:
+                        movedblock = msg.symbolic_block_positions[target-2]
+                        
+                    movedblock.is_top = True
+                    
+                    if target == 0:
+                        msg.symbolic_block_positions[target-3] = movedblock
+                    else:
+                        msg.symbolic_block_positions[target-2] = movedblock
+
+
+
+
+                    if target == 0:
+                        print "With left arm, moved block " + str(target-2) +" onto block scatter"
+                    else:
+                        print "With left arm, moved block " + str(target-1) +" onto block scatter"
+            
             return True
 
 ############################# END SIMULATOR ACTIONS ############################
@@ -919,14 +1061,15 @@ def broadcast_state():
 
 # Sets up all global variables, change parameters here  
 def setup_variables():
-    global gripper 
-    gripper = baxter_interface.Gripper('right') #instantiate gripper
-    global left_gripper 
-    left_gripper = baxter_interface.Gripper('left') #instantiate left gripper
-    global limb 
-    limb = baxter_interface.Limb('right') #instantiate limb
-    global left_limb 
-    left_limb = baxter_interface.Limb('left') #instantiate left limb
+    if rospy.get_param("/simulator_mode") == False:
+        global gripper 
+        gripper = baxter_interface.Gripper('right') #instantiate gripper
+        global left_gripper 
+        left_gripper = baxter_interface.Gripper('left') #instantiate left gripper
+        global limb 
+        limb = baxter_interface.Limb('right') #instantiate limb
+        global left_limb 
+        left_limb = baxter_interface.Limb('left') #instantiate left limb
     global initial_pose
     global first_run
     first_run = 1
