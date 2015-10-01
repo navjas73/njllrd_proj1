@@ -41,6 +41,7 @@ dualcounter = 1
 
 def handle_move_robot(req):
     
+    
     global dual_arm_mode
 
     if rospy.get_param('/dual_arm_mode') == True:
@@ -48,64 +49,32 @@ def handle_move_robot(req):
     else: 
         dual_arm_mode = False
 
-    global first_run
-
     
-    global xcounter
-    global ycounter
-    global stack_switch
-
     action = req.action
     target = req.target
 
-    num_blocks = rospy.get_param('/num_blocks')
 
-    if first_run == 1:
-        setup_block_positions()
-        first_run = 0
+################### SIMULATOR CHECK ######################################
+    simulator_mode = rospy.get_param('/simulator_mode')
 
-############################# OPEN GRIPPER #####################################
-    if action == 'open_gripper':
-        if target == -1:
-            success = open_gripper('right')
-        elif target == 1:   
-            success = open_gripper('left')
-        else:
-            print "Invalid open gripper target"
-            return False
-        if success:
-            print "Opened Gripper"
-        return success
-########################### END OPEN GRIPPER ###################################
-
-
-############################## CLOSE GRIPPER ###################################
-    elif action == 'close_gripper':
-        if target == -1:
-            success = close_gripper('right')
-        elif target == 1:
-            success = close_gripper('left')
-        else:
-            print "Invalid close gripper target"
-            return False
-        if success:    
-            print "Closed Gripper"
-        return success
-############################ END CLOSE GRIPPER #################################
-
-
-############################### MOVE TO BLOCK ##################################
-    elif action == 'move_to_block':
-        if (target>num_blocks or target<1):
-            if dual_arm_mode:
-                msg.block_positions[0].x = msg.block_positions[0].x-stack_switch*.20
-                  
+    if simulator_mode:
+        if action == 'open_gripper':
+            if target == -1:
+                success = open_gripper_simulator('right')
+            elif target == 1:
+                success = open_gripper_simulator('left')
             else:
-                msg.block_positions[0].y = msg.block_positions[0].y-stack_switch*.25
-            msg.stack = 0
-            stack_switch = -stack_switch
-            success = True
-        else:
+                return False
+
+        elif action == 'close_gripper':
+            if target == -1:
+                success = close_gripper_simulator('right')
+            elif target == 1:
+                success = close_gripper_simulator('left')
+            else:
+                return False
+
+        elif action == 'move_to_block':
             if dual_arm_mode:
                 if target%2 == 0:
                     targetlimb = 'right'
@@ -113,47 +82,207 @@ def handle_move_robot(req):
                     targetlimb = 'left'
             else:
                 targetlimb = 'right'
-            success = move_to_block(targetlimb, target)
-            if success:
-                print "Moved to block: " + str(target) + " with limb" + targetlimb
-            else:
-                print "Failed to move to block: " + str(target) + " with limb" + targetlimb
-        return success
-############################# END MOVE TO BLOCK ###############################
 
+            success = move_to_block_simulator(targetlimb, target)
 
-############################ MOVE OVER BLOCK ##################################
-    # Drop block off at new location. Should change State, blockposition after completion
-    elif action == 'move_over_block':
-        if dual_arm_mode == True:
-            even_odd_test = rospy.get_param("/num_blocks")%2
-            configuration = rospy.get_param('/configuration')
-            if (target%2 == 0) and (target != 0):
-                targetlimb = 'left'
-            elif (target == 0) and not((configuration == "stacked_ascending") and not(even_odd_test)):
-                targetlimb = 'left'
+        elif action == 'move_over_block':
+            
+            if dual_arm_mode == True:
+                even_odd_test = rospy.get_param("/num_blocks")%2
+                configuration = rospy.get_param('/configuration')
+                if (target%2 == 0) and (target != 0):
+                    targetlimb = 'left'
+                elif (target == 0) and not((configuration == "stacked_ascending") and not(even_odd_test)):
+                    targetlimb = 'left'
+                else:
+                    targetlimb = 'right'
             else:
                 targetlimb = 'right'
+            
+            success = move_over_block_simulator(targetlimb, target)
+
         else:
-            targetlimb = 'right'
-        print targetlimb
-        success = move_over_block(targetlimb, target)
-        if success:
-            print "Moved over block: " + str(target) + " with limb" + targetlimb
-        else:
-            print "Failed to move over block: " + str(target) + " with limb" + targetlimb
+            return False
         
         return success
-########################### END MOVE OVER BLOCK ###############################
-    
+########################### END SIMULATOR CHECK #############################
+
+
+
     else:
-        print "Invalid action request"
-        return False
-    # Returns false if action is invalid or action fails
+        global first_run
+
+        
+        global xcounter
+        global ycounter
+        global stack_switch
+
+
+        num_blocks = rospy.get_param('/num_blocks')
+
+        if first_run == 1:
+            setup_block_positions()
+            first_run = 0
+
+    ############################# OPEN GRIPPER #####################################
+        if action == 'open_gripper':
+            if target == -1:
+                success = open_gripper('right')
+            elif target == 1:   
+                success = open_gripper('left')
+            else:
+                print "Invalid open gripper target"
+                return False
+            if success:
+                print "Opened Gripper"
+            return success
+    ########################### END OPEN GRIPPER ###################################
+
+
+    ############################## CLOSE GRIPPER ###################################
+        elif action == 'close_gripper':
+            if target == -1:
+                success = close_gripper('right')
+            elif target == 1:
+                success = close_gripper('left')
+            else:
+                print "Invalid close gripper target"
+                return False
+            if success:    
+                print "Closed Gripper"
+            return success
+    ############################ END CLOSE GRIPPER #################################
+
+
+    ############################### MOVE TO BLOCK ##################################
+        elif action == 'move_to_block':
+            if (target>num_blocks or target<1):
+                if dual_arm_mode:
+                    msg.block_positions[0].x = msg.block_positions[0].x-stack_switch*.20
+                      
+                else:
+                    msg.block_positions[0].y = msg.block_positions[0].y-stack_switch*.25
+                msg.stack = 0
+                stack_switch = -stack_switch
+                success = True
+            else:
+                if dual_arm_mode:
+                    if target%2 == 0:
+                        targetlimb = 'right'
+                    else:
+                        targetlimb = 'left'
+                else:
+                    targetlimb = 'right'
+                success = move_to_block(targetlimb, target)
+                if success:
+                    print "Moved to block: " + str(target) + " with limb" + targetlimb
+                else:
+                    print "Failed to move to block: " + str(target) + " with limb" + targetlimb
+            return success
+    ############################# END MOVE TO BLOCK ###############################
+
+
+    ############################ MOVE OVER BLOCK ##################################
+        # Drop block off at new location. Should change State, blockposition after completion
+        elif action == 'move_over_block':
+            if dual_arm_mode == True:
+                even_odd_test = rospy.get_param("/num_blocks")%2
+                configuration = rospy.get_param('/configuration')
+                if (target%2 == 0) and (target != 0):
+                    targetlimb = 'left'
+                elif (target == 0) and not((configuration == "stacked_ascending") and not(even_odd_test)):
+                    targetlimb = 'left'
+                else:
+                    targetlimb = 'right'
+            else:
+                targetlimb = 'right'
+            print targetlimb
+            success = move_over_block(targetlimb, target)
+            if success:
+                print "Moved over block: " + str(target) + " with limb" + targetlimb
+            else:
+                print "Failed to move over block: " + str(target) + " with limb" + targetlimb
+            
+            return success
+    ########################### END MOVE OVER BLOCK ###############################
+        
+        else:
+            print "Invalid action request"
+            return False
+        # Returns false if action is invalid or action fails
         
 
 
+############################# SIMULATOR ACTIONS ################################
+def open_gripper_simulator(side):
+    if side == 'right':
+        if msg.gripper_state == 0 or msg.to_block == 1:
+            return False
+        else:
+            msg.gripper_state = 0
+            return True
 
+    elif side = 'left':
+        if msg.left_gripper_state == 0 or msg.left_to_block == 1:
+            return False
+        else: 
+            msg.left_gripper_state = 0
+            return True
+
+    else
+        return False
+
+
+
+def close_gripper_simulator(side):
+    if side == 'right':
+        if msg.gripper_state == 1 or msg.to_block == 0:
+            return False
+        else:
+            msg.gripper_state = 1
+            return True
+
+    elif side = 'left':
+        if msg.left_gripper_state == 1 or msg.left_to_block == 0:
+            return False
+        else: 
+            msg.left_gripper_state = 1
+            return True
+
+    else
+        return False
+
+def move_to_block_simulator(side, target):
+    if side == 'right':
+        if msg.gripper_state == 1 or msg.to_block == 1:
+            return False
+        else:
+            msg.to_block = 1   
+            return True
+
+    if side == 'left':
+        if msg.left_gripper_state == 1 or msg.left_to_block == 1:
+            return False
+        else:
+            msg.left_to_block = 1   
+            return True
+
+def move_over_block_simulator(side, target):
+    if side == 'right':
+        if msg.gripper_state == 0 or msg.to_block == 0:
+            return False
+        else:
+            msg.to_block = 0   
+            return True
+
+    if side == 'left':
+        if msg.left_gripper_state == 0 or msg.left_to_block == 0:
+            return False
+        else:
+            msg.left_to_block = 0   
+            return True
+
+############################# END SIMULATOR ACTIONS ############################
 
 
 
@@ -671,6 +800,8 @@ def setup_variables():
     msg.gripper_state = 0 
     msg.left_gripper_state = 0 
     msg.stack = 0
+    msg.to_block = 1
+    msg.left_to_block = 1
     global out_distance
     out_distance = .2
 
