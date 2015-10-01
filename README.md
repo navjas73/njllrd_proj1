@@ -39,6 +39,6 @@ If using dual arm mode:
 - For dual arm mode, initialize the grippers such that they grip the blocks at a downward 45 degree angle from opposite sides. ie, left arm from the left and right arm from the right
 
 Notes:
-- Commands can be sent after an action has been completed by publishing a new message using "rostopic pub command std_msgs/String" as before.  The first mode should finish before commanding a new mode. The controller will not allow a command to the existing configuration.
+- Commands can be sent after an action has been completed by publishing a new message using "rostopic pub command std_msgs/String" as before.  The first mode should finish before commanding a new mode. The controller will not allow a command to the existing configuration. If a command is sent while an action is being performed, that new command will be ignored. 
 - The initial configuration cannot be scattered. 
 - In single arm mode, initialize the right arm vertically above the uppermost block. 
