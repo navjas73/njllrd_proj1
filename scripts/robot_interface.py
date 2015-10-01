@@ -297,6 +297,7 @@ def move_to_block_simulator(side, target):
             return True
 
 def move_over_block_simulator(side, target):
+   
     if side == 'right':
         if msg.gripper_state == 0 or msg.to_block == 0 or msg.symbolic_block_positions[target].is_top == False:
             return False
@@ -352,9 +353,48 @@ def move_over_block_simulator(side, target):
                     msg.symbolic_block_positions[target-2] = movedblock
                 
                
-                print "new block position 4"
-                print msg.block_positions[4]
+            elif rospy.get_param("/current_mode") == "scatter"
+            
+                if rospy.get_param("/configuration") == "stacked_descending":
+                    #change state of block we're moving, which in this case is the block we're putting a block on + 1
+                    movedblock = msg.symbolic_block_positions[target+1]
+                    movedblock.stack = "unique"
+                    msg.symbolic_block_positions[target+1] = movedblock
+                    
+                    #change state of block we moved off of
+                    movedblock = msg.symbolic_block_positions[target+2]
+                    movedblock.is_top = True
+                    msg.symbolic_block_positions[target+2] = movedblock
+                    
+                elif rospy.get_param("/current_mode") == "stacked_ascending":
+                #change state of block we're moving, which in this case is the block we're putting a block on - 1
+                if target == 0:
+                    movedblock = msg.symbolic_block_positions[target-2]
+                else:
+                    movedblock = msg.symbolic_block_positions[target-1]
+                    
+                movedblock.stack = "unique"
                 
+                if target == 0:
+                    msg.symbolic_block_positions[target-2] = movedblock
+                else:
+                    msg.symbolic_block_positions[target-1] = movedblock
+                    
+                
+                
+                # change state of block we moved off of
+                 if target == 0:
+                    movedblock = msg.symbolic_block_positions[target-3]
+                else:
+                    movedblock = msg.symbolic_block_positions[target-2]
+                    
+                movedblock.is_top = True
+                
+                if target == 0:
+                    msg.symbolic_block_positions[target-3] = movedblock
+                else:
+                    msg.symbolic_block_positions[target-2] = movedblock
+                    
             return True
 
     if side == 'left':
