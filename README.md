@@ -17,7 +17,7 @@ How to run:
 
 How to send commands:
 - Open a new terminal and connect to Baxter
-- From the ros_ws directory, publish messages according to the desired action. Enter: "rostopic pub command std_msgs/String <<COMMAND_HERE>>". Acceptable strings for COMMAND_HERE are:
+- From the ros_ws directory, publish messages according to the desired action. Enter: "rostopic pub command std_msgs/String COMMAND_HERE". Acceptable strings for COMMAND_HERE are:
 	- "stack_ascending"   - will stack the blocks in ascending order
 	- "stack_descending"  - will stack the blocks in descending order
 	- "scatter"           - will scatter the blocks 
