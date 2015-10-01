@@ -321,13 +321,37 @@ def move_over_block_simulator(side, target):
                 
             elif rospy.get_param("/current_mode") == "stack_descending":
                 #change state of block we're moving, which in this case is the block we're putting a block on - 1
-                print "target block - 0"
-                print targetblock
-                movedblock = msg.block_positions[target-1]
-                movedblock.x = targetblock.x
-                movedblock.y = targetblock.y
-                movedblock.z = targetblock.z + block_height
-                msg.block_positions[target-1] = movedblock
+                if target == 0:
+                    movedblock = msg.symbolic_block_positions[target-2]
+                else:
+                    movedblock = msg.symbolic_block_positions[target-1]
+                    
+                movedblock.stack = "even"
+                
+                if target == 0:
+                    msg.symbolic_block_positions[target-2] = movedblock
+                else:
+                    msg.symbolic_block_positions[target-1] = movedblock
+                    
+                #change state of block we moved onto
+                movedblock = msg.symbolic_block_positions[target]
+                movedblock.is_top = False
+                msg.symbolic_block_positions[target] = movedblock
+                
+                # change state of block we moved off of
+                 if target == 0:
+                    movedblock = msg.symbolic_block_positions[target-3]
+                else:
+                    movedblock = msg.symbolic_block_positions[target-2]
+                    
+                movedblock.is_top = True
+                
+                if target == 0:
+                    msg.symbolic_block_positions[target-3] = movedblock
+                else:
+                    msg.symbolic_block_positions[target-2] = movedblock
+                
+               
                 print "new block position 4"
                 print msg.block_positions[4]
                 
