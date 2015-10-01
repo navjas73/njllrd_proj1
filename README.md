@@ -4,7 +4,10 @@ Richard Dunphey, Naveen Jasty, Lisa Li
 
 SYMBOLIC SIMULATOR
 
+
+
 REAL ROBOT
+
 How to run:
 - Clone the project with https://github.com/navjas73/njllrd_proj1.git into the ros_ws/src folder
 - Make sure Baxter is on and powered up if using the real robot. Next, in a new terminal, connect to Baxter with the command : ". baxter.sh" or ". baxter.sh sim" if using the simulator from within the ros_ws directory
