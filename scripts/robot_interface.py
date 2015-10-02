@@ -878,6 +878,16 @@ def setup_block_positions():
                 block.z = fpose['position'][2]-block_height*(i)  # sets z of block to fpose (varies with current block)
                 msg.block_positions.append(block)   # adds block to block_positions array (in state msg)     
     
+        # for tower of hanoi, block 0 is withPole, block n+1 is toPole, block n+2 is fromPole        
+        block = blockposition()
+        block.x = fpose['position'][0]
+        # moved over .25m
+        block.y = fpose['position'][1]+.5 
+        # moved down num_blocks*block_height
+        block.z = fpose['position'][2]-rospy.get_param("/num_blocks")*block_height
+        msg.block_positions.append(block)
+        block.y = fpose['position'][1]
+        msg.block_positions.append(block)
 
     
     

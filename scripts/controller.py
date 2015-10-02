@@ -6,7 +6,9 @@ import time
 from std_msgs.msg import String
 
 working = False
-
+#fromPole = None
+#withPole = None
+#toPole = None
 
 # When topic "command" is published to, reads block orientation mode and
 #   starts relevant process
@@ -32,6 +34,19 @@ def mode_selection(data):
                     stack_descending()
                 else:
                     print("Already stacked descending")
+            elif data.data == "tower_of_hanoi":
+                #global fromPole
+                #global withPole
+                #global toPole
+                # initialize towers with blocks that represent the table
+                n = rospy.get_param("/num_blocks")
+                fromPole = range(n,0,-1)
+                print fromPole
+                fromPole.insert(0,n+2)
+                withPole = [0]
+                toPole = [n+1]
+                moveTower(n,fromPole,toPole,withPole)
+                
             else: 
                 print("Invalid mode")
         else:
@@ -304,7 +319,26 @@ def dual_odd_even():
 
     return True
 
+def moveTower(height,fromPole,toPole,withPole):
+    if height >= 1:
+        moveTower(height-1,fromPole,withPole,toPole)
+        [fromPole,toPole]=moveDisk(fromPole, toPole)
+        moveTower(height-1,withPole,toPole,fromPole)
 
+def moveDisk(fromPole, toPole):
+    rate = rospy.Rate(.5)
+    request_movement("move_to_block",fromPole[-1])
+    rate.sleep()
+    request_movement("close_gripper",-1)
+    rate.sleep()
+    request_movement("move_over_block",toPole[-1])
+    rate.sleep()
+    request_movement("open_gripper",-1)
+    rate.sleep()
+    toPole.append(fromPole.pop(-1))
+    print fromPole
+    print toPole
+    return [fromPole,toPole]
 
 def controller():
     rospy.init_node('controller')
