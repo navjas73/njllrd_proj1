@@ -2,7 +2,7 @@
 
 <launch>
   
-    <param name="num_blocks" value="3" />
+    <param name="num_blocks" value="4" />
     <param name="configuration" value="stacked_descending" />
     <param name="dual_arm_mode" value='False' />
     <param name="current_mode" value="scatter" />

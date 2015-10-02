@@ -181,6 +181,9 @@ def dual_scatter():
     # Code for moving blocks with scattered orientation
     num_blocks = rospy.get_param("/num_blocks")
     rate = rospy.Rate(.5)
+    #newRange = range(1,num_blocks+1,2)
+    #newRange.insert(0,0)
+    
     for i in range(1,num_blocks+1,2):
         request_movement("close_gripper", -1)
         rate.sleep()
@@ -221,21 +224,22 @@ def dual_stack_ascending():
     working = True
     rate = rospy.Rate(0.5)
     num_blocks = rospy.get_param("/num_blocks")
-    for i in range(1,num_blocks,2):
+    for i in range(1,num_blocks+1,2):
         request_movement("close_gripper",-1) 
         rate.sleep()
         request_movement("close_gripper",1)
         rate.sleep()
         if i-1 < num_blocks:
             request_movement("move_over_block",i-1)
-        rate.sleep()
+            rate.sleep()
+            request_movement("open_gripper", 1)
+            rate.sleep()
         if i < num_blocks:
             request_movement("move_over_block",i)
             rate.sleep()        
-        request_movement("open_gripper", -1)
-        rate.sleep()
-        request_movement("open_gripper", 1)
-        rate.sleep()
+            request_movement("open_gripper", -1)
+            rate.sleep()
+
         if i+3 < num_blocks + 1:
             request_movement("move_to_block",i+3)
             rate.sleep()

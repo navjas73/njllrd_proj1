@@ -702,7 +702,7 @@ def scatter_block(side, target):
         current_pose = current_pose['position']
         # Move over to desired spot
         if dual_arm_mode == True:
-            new_pose = limb.Point(current_pose[0],current_pose[1]-dualcounter*0.1,current_pose[2])
+            new_pose = limb.Point(current_pose[0]+.1,current_pose[1]-dualcounter*0.1,current_pose[2])
         else:
             new_pose = limb.Point(xpos+xcounter*.1,ypos+ycounter*.1, current_pose[2])
         joints = request_kinematics(new_pose, initial_pose['orientation'], 'right')
@@ -711,7 +711,7 @@ def scatter_block(side, target):
         
         # Move down to desired spot
         if dual_arm_mode == True:
-            new_pose = limb.Point(current_pose[0],current_pose[1]-dualcounter*0.1,zpos)
+            new_pose = limb.Point(current_pose[0]+.1,current_pose[1]-dualcounter*0.1,zpos)
         else:
             new_pose = limb.Point(xpos+xcounter*.1,ypos+ycounter*.1, zpos)
         joints = request_kinematics(new_pose, initial_pose['orientation'], 'right')
@@ -722,12 +722,12 @@ def scatter_block(side, target):
         current_pose = left_limb.endpoint_pose()
         current_pose = current_pose['position']
         # Move over to desired spot
-        new_pose = limb.Point(current_pose[0],current_pose[1]+dualcounter*0.05,current_pose[2])
+        new_pose = limb.Point(current_pose[0]+.1,current_pose[1]+dualcounter*0.05,current_pose[2])
         joints = request_kinematics(new_pose, left_initial_pose['orientation'], 'left')
         left_limb.move_to_joint_positions(joints)
 
         # Move down to desired spot
-        new_pose = limb.Point(current_pose[0],current_pose[1]+dualcounter*0.05,zpos)
+        new_pose = limb.Point(current_pose[0]+.1,current_pose[1]+dualcounter*0.05,zpos)
         joints = request_kinematics(new_pose, left_initial_pose['orientation'], 'left')
         left_limb.move_to_joint_positions(joints)
                 
@@ -789,29 +789,32 @@ def setup_block_positions():
     # If we're in dual arm mode, new stack position should be offset in x
     # If we're in single arm mode, new stack position should be offset in y (more space)
     # New position is defined by location of block zero, which is set up first
-    if dual_arm_mode:
-        #set state of block 0 -- table underneath final stack
-        block = blockposition()
-        block.x = fpose['position'][0]+.20
-        # moved over .25m
-        block.y = fpose['position'][1]
-        # moved down num_blocks*block_height
-        block.z = fpose['position'][2]-rospy.get_param("/num_blocks")*block_height
-        msg.block_positions.append(block)
-        print(block)
-
+    if dual_arm_mode: 
             # Set state of other blocks 
         # If our starting configuration is stacked descending, we can loop through and set the location of blocks using the index of our array
         # If stacked ascending, we need a different loop to make sure the blocks are in the right position in our block_positions array
         test = rospy.get_param('/num_blocks')%2
-
-       
 
         if rospy.get_param('/configuration') == "stacked_descending":
             fpose = left_initial_pose
             raised_height = fpose['position'][2]+finger_length
             left_limb_offset = 0
             right_limb_offset = -.1
+            #set state of block 0 -- table underneath final stack
+            block = blockposition()
+            block.x = fpose['position'][0]+.20
+            # moved over .25m
+            block.y = fpose['position'][1]
+            # moved down num_blocks*block_height
+            block.z = fpose['position'][2]-rospy.get_param("/num_blocks")*block_height
+            msg.block_positions.append(block)
+            print(block)
+            
+            # Sets position where scattering begins (nice if this can be adjusted)
+            xpos = fpose['position'][0]-.2
+            ypos = fpose['position'][1]+.1
+            zpos = fpose['position'][2]-rospy.get_param("/num_blocks")*block_height+block_height
+            
             #Set position of blocks if initial config = stacked descending
             for i in range(0,rospy.get_param("/num_blocks")):
                 block = blockposition() # makes new instance of blockposition msg
@@ -825,11 +828,39 @@ def setup_block_positions():
                 raised_height = fpose['position'][2]+finger_length
                 left_limb_offset = 0
                 right_limb_offset = -.1
+                #set state of block 0 -- table underneath final stack
+                block = blockposition()
+                block.x = fpose['position'][0]+.20
+                # moved over .25m
+                block.y = fpose['position'][1]
+                # moved down num_blocks*block_height
+                block.z = fpose['position'][2]-rospy.get_param("/num_blocks")*block_height
+                msg.block_positions.append(block)
+                print(block)
+                
+                # Sets position where scattering begins (nice if this can be adjusted)
+                xpos = fpose['position'][0]-.2
+                ypos = fpose['position'][1]+.1
+                zpos = fpose['position'][2]-rospy.get_param("/num_blocks")*block_height+block_height
             else:
                 fpose = initial_pose
                 raised_height = fpose['position'][2]+finger_length
                 left_limb_offset = 0.1
                 right_limb_offset = 0
+                #set state of block 0 -- table underneath final stack
+                block = blockposition()
+                block.x = fpose['position'][0]+.20
+                # moved over .25m
+                block.y = fpose['position'][1]
+                # moved down num_blocks*block_height
+                block.z = fpose['position'][2]-rospy.get_param("/num_blocks")*block_height
+                msg.block_positions.append(block)
+                print(block)
+                
+                # Sets position where scattering begins (nice if this can be adjusted)
+                xpos = fpose['position'][0]-.2
+                ypos = fpose['position'][1]+.1
+                zpos = fpose['position'][2]-rospy.get_param("/num_blocks")*block_height+block_height
 
             #Set position of blocks if initial config = stacked ascending
             # Take note of reverse loop to set blocks in correct index of block_positions array 
@@ -877,17 +908,17 @@ def setup_block_positions():
                 block.y = fpose['position'][1]  # sets y of block to fpose
                 block.z = fpose['position'][2]-block_height*(i)  # sets z of block to fpose (varies with current block)
                 msg.block_positions.append(block)   # adds block to block_positions array (in state msg)     
-    
-        # for tower of hanoi, block 0 is withPole, block n+1 is toPole, block n+2 is fromPole        
-        block = blockposition()
-        block.x = fpose['position'][0]
-        # moved over .25m
-        block.y = fpose['position'][1]+.5 
-        # moved down num_blocks*block_height
-        block.z = fpose['position'][2]-rospy.get_param("/num_blocks")*block_height
-        msg.block_positions.append(block)
-        block.y = fpose['position'][1]
-        msg.block_positions.append(block)
+        elif 1 == 0:    
+            # for tower of hanoi, block 0 is withPole, block n+1 is toPole, block n+2 is fromPole        
+            block = blockposition()
+            block.x = fpose['position'][0]
+            # moved over .25m
+            block.y = fpose['position'][1]+.5 
+            # moved down num_blocks*block_height
+            block.z = fpose['position'][2]-rospy.get_param("/num_blocks")*block_height
+            msg.block_positions.append(block)
+            block.y = fpose['position'][1]
+            msg.block_positions.append(block)
 
     
     
